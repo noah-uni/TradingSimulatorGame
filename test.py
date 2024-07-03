@@ -1,58 +1,45 @@
-import pygame
-import sys
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.dates import DateFormatter, MinuteLocator
+import mplfinance as mpf
+from nicegui import ui
 
-# Initialize Pygame
-pygame.init()
+# Step 1: Prepare the DataFrame
+import backend
 
-# Set up the display
-screen = pygame.display.set_mode((800, 600))
-pygame.display.set_caption("Trading Game")
+Game = backend.GameManager("2022-06-06", ["EUR/USD"])
+data = Game.get_stock_prices("EUR/USD", "2022-08-09 07:20", "2022-08-10 00:00")
 
-# Colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
+df = pd.DataFrame(data, columns=["datetime", "open", "high", "low", "close"])
+df["datetime"] = pd.to_datetime(df["datetime"])
 
-# Font
-font = pygame.font.Font(None, 32)
-
-# Ticker input field
-ticker_input = ""
-input_rect = pygame.Rect(200, 200, 200, 32)
-active = False
-
-# Main loop
-running = True
-while running:
-    screen.fill(WHITE)
+# Step 2: Plot the Candlestick Chart
+def plot_candlestick_chart():
+    fig, ax = plt.subplots()
+    mpf.plot(
+        df.set_index("datetime"),
+        type='candle',
+        style='charles',
+        ax=ax,
+        datetime_format='%Y-%m-%d %H:%M',
+        xrotation=20
+    )
     
-    # Handle events
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RETURN:
-                # Process the ticker_input (e.g., fetch data, execute trade)
-                print("Ticker entered:", ticker_input)
-                ticker_input = ""
-            elif event.key == pygame.K_BACKSPACE:
-                ticker_input = ticker_input[:-1]
-            else:
-                ticker_input += event.unicode
-        
-        # Toggle active state for input field
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if input_rect.collidepoint(event.pos):
-                active = not active
-            else:
-                active = False
+    ax.xaxis.set_major_locator(MinuteLocator(interval=1))
+    ax.xaxis.set_major_formatter(DateFormatter("%H:%M"))
+    
+    plt.xlabel("Time")
+    plt.ylabel("Price")
+    plt.title("Stock Chart")
+    plt.grid(True)
 
-    # Draw input field
-    pygame.draw.rect(screen, BLACK, input_rect, 2)
-    text_surface = font.render(ticker_input, True, BLACK)
-    screen.blit(text_surface, (input_rect.x + 5, input_rect.y + 5))
+    return fig
 
-    pygame.display.flip()
+# Step 3: Integrate with NiceGUI
+"""@ui.page('/')
+async def main_page():"""
+fig = plot_candlestick_chart()
+ui.pyplot(fig)
 
-# Quit Pygame
-pygame.quit()
-sys.exit()
+# Start the NiceGUI application
+ui.run()
