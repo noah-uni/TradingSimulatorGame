@@ -1,45 +1,60 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.dates import DateFormatter, MinuteLocator
-import mplfinance as mpf
-from nicegui import ui
+# chart_app.py
+from flask import Flask, render_template_string
 
-# Step 1: Prepare the DataFrame
-import backend
+app = Flask(__name__)
 
-Game = backend.GameManager("2022-06-06", ["EUR/USD"])
-data = Game.get_stock_prices("EUR/USD", "2022-08-09 07:20", "2022-08-10 00:00")
+@app.route('/')
+def chart():
+    chart_js = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            #chart {
+                width: 100%;
+                height: 400px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="chart"></div>
+        <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+        <script>
+            const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+                width: 600,
+                height: 400,
+                layout: {
+                    backgroundColor: '#000000',
+                    textColor: '#FFFFFF',
+                },
+                grid: {
+                    vertLines: {
+                        color: '#404040',
+                    },
+                    horzLines: {
+                        color: '#404040',
+                    },
+                },
+                priceScale: {
+                    borderColor: '#cccccc',
+                },
+                timeScale: {
+                    borderColor: '#cccccc',
+                },
+            });
 
-df = pd.DataFrame(data, columns=["datetime", "open", "high", "low", "close"])
-df["datetime"] = pd.to_datetime(df["datetime"])
+            const lineSeries = chart.addLineSeries();
+            lineSeries.setData([
+                { time: '2023-01-01', value: 100 },
+                { time: '2023-01-02', value: 105 },
+                { time: '2023-01-03', value: 102 },
+                // More data points...
+            ]);
+        </script>
+    </body>
+    </html>
+    """
+    return render_template_string(chart_js)
 
-# Step 2: Plot the Candlestick Chart
-def plot_candlestick_chart():
-    fig, ax = plt.subplots()
-    mpf.plot(
-        df.set_index("datetime"),
-        type='candle',
-        style='charles',
-        ax=ax,
-        datetime_format='%Y-%m-%d %H:%M',
-        xrotation=20
-    )
-    
-    ax.xaxis.set_major_locator(MinuteLocator(interval=1))
-    ax.xaxis.set_major_formatter(DateFormatter("%H:%M"))
-    
-    plt.xlabel("Time")
-    plt.ylabel("Price")
-    plt.title("Stock Chart")
-    plt.grid(True)
-
-    return fig
-
-# Step 3: Integrate with NiceGUI
-"""@ui.page('/')
-async def main_page():"""
-fig = plot_candlestick_chart()
-ui.pyplot(fig)
-
-# Start the NiceGUI application
-ui.run()
+if __name__ == '__main__':
+    app.run(debug=True)
