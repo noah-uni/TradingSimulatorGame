@@ -13,7 +13,6 @@ dtype = np.dtype([
 
 # Read the CSV file
 df_eurusd = pd.read_csv('./Data/eurusd_2021to2024.csv')
-
 # Convert the datetime column to datetime64
 df_eurusd['datetime'] = pd.to_datetime(df_eurusd['datetime'])
 
@@ -29,7 +28,6 @@ data_eurusd['close'] = df_eurusd['close'].values
 
 # Read the CSV file
 df_btcusd = pd.read_csv('./Data/btcusd_2022to2024.csv')
-
 # Convert the datetime column to datetime64
 df_btcusd['datetime'] = pd.to_datetime(df_btcusd['datetime'])
 
@@ -148,26 +146,21 @@ class GameManager:
         self.start_date = start_date
         self.tickers = tickers
         
-    def get_stock_price(self, ticker, timedate):
+    
+    def get_stock_prices(self, ticker, start_date, end_date):
+        start_date = np.datetime64(start_date, 'm')
+        end_date = np.datetime64(end_date, 'm')
         if ticker in self.tickers:
             if ticker == 'EUR/USD':
-                timedate = np.datetime64(timedate, 'm')
-                mask = (data_eurusd['datetime'] == timedate)
+                # Create a boolean mask
+                mask = (data_eurusd['datetime'] >= start_date) & (data_eurusd['datetime'] <= end_date)
                 Data_df = pd.DataFrame(data_eurusd[mask])
                 Data_df.rename(columns={'datetime': 'date'}, inplace=True)
                 Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
                 return Data_df
-        else:
-            print("Not supported ticker symbol")
-    
-    def get_stock_prices(self, ticker, start_date, end_date):
-        if ticker in self.tickers:
-            if ticker == 'EUR/USD':
-                start_date = np.datetime64(start_date, 'm')
-                end_date = np.datetime64(end_date, 'm')
-                # Create a boolean mask
-                mask = (data_eurusd['datetime'] >= start_date) & (data_eurusd['datetime'] <= end_date)
-                Data_df = pd.DataFrame(data_eurusd[mask])
+            elif ticker == 'BTC/USD':
+                mask = (data_btcusd['datetime'] >= start_date) & (data_btcusd['datetime'] <= end_date)
+                Data_df = pd.DataFrame(data_btcusd[mask])
                 Data_df.rename(columns={'datetime': 'date'}, inplace=True)
                 Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
                 return Data_df
