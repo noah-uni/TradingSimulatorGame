@@ -153,7 +153,10 @@ class GameManager:
             if ticker == 'EUR/USD':
                 timedate = np.datetime64(timedate, 'm')
                 mask = (data_eurusd['datetime'] == timedate)
-                return data_eurusd[mask]
+                Data_df = pd.DataFrame(data_eurusd[mask])
+                Data_df.rename(columns={'datetime': 'date'}, inplace=True)
+                Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
+                return Data_df
         else:
             print("Not supported ticker symbol")
     
@@ -164,6 +167,9 @@ class GameManager:
                 end_date = np.datetime64(end_date, 'm')
                 # Create a boolean mask
                 mask = (data_eurusd['datetime'] >= start_date) & (data_eurusd['datetime'] <= end_date)
-                return data_eurusd[mask]
+                Data_df = pd.DataFrame(data_eurusd[mask])
+                Data_df.rename(columns={'datetime': 'date'}, inplace=True)
+                Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
+                return Data_df
         else:
             print("Not supported ticker symbol")

@@ -5,10 +5,11 @@ import backend
 Game = backend.GameManager("2022-06-06", ["EUR/USD"])
 start_date = "2022-08-09 07:20"
 end_date = "2022-08-12 00:00"
-Data = Game.get_stock_prices("EUR/USD", start_date, end_date)
-Data_df = pd.DataFrame(Data)
+Data_df = Game.get_stock_prices("EUR/USD", start_date, end_date)
+
+"""Data_df = pd.DataFrame(Data)
 Data_df.rename(columns={'datetime': 'date'}, inplace=True)
-Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
+Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')"""
 
 def get_bar_data(symbol, start_date=start_date, end_date=end_date):
     if symbol not in Game.tickers:
