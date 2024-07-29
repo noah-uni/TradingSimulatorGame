@@ -13,7 +13,6 @@ dtype = np.dtype([
 
 # Read the CSV file
 df_eurusd = pd.read_csv('./Data/eurusd_2021to2024.csv')
-
 # Convert the datetime column to datetime64
 df_eurusd['datetime'] = pd.to_datetime(df_eurusd['datetime'])
 
@@ -29,7 +28,6 @@ data_eurusd['close'] = df_eurusd['close'].values
 
 # Read the CSV file
 df_btcusd = pd.read_csv('./Data/btcusd_2022to2024.csv')
-
 # Convert the datetime column to datetime64
 df_btcusd['datetime'] = pd.to_datetime(df_btcusd['datetime'])
 
@@ -165,5 +163,6 @@ class GameManager:
                 Data_df = pd.DataFrame(data_btcusd[mask])
                 Data_df.rename(columns={'datetime': 'date'}, inplace=True)
                 Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
+                return Data_df
         else:
             print("Not supported ticker symbol")
