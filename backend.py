@@ -96,7 +96,7 @@ class User:
         self.cash = cash                # Starting cash
         self.capital_invested = 0
         self.capital = self.cash + self.capital_invested
-        self.positions: List[Position] = []
+        self.positions: dict[Position] = {}
         
     def buy_stock(self, ticker, quantity, price, leverage, type):
         if quantity*price <= self.cash:
@@ -104,7 +104,7 @@ class User:
             self.capital_invested += margin
             self.cash -= margin
             self.capital = self.cash + self.capital_invested
-            self.positions.append(Position(ticker, quantity, price, leverage, margin, type))
+            self.positions[ticker] = Position(ticker, quantity, price, leverage, margin, type)
             print(f"{self.name} bought Stock {ticker} with Leverage: {leverage}")
         
         elif ticker in [position.ticker for position in self.positions]:
@@ -113,24 +113,26 @@ class User:
             self.cash -= margin
             self.capital = self.cash + self.capital_invested
             #get the position that already exists with the same ticker
-            position = next((position for position in self.positions if position.ticker == ticker), None) 
+            position = self.positions[ticker]
+            #position = next((position for position in self.positions if position.ticker == ticker), None) 
             position.add_quantity(quantity, margin, price)
+            print(f"{self.name} bought Stock {ticker} with Leverage: {leverage}")
         else:
             print("Not enough cash")
 
-    def sell_stock(self, postion:Position, quantity):
-        if postion.quantity == quantity:
-            self.capital_invested -= postion.margin + postion.pnl
-            self.cash += postion.margin + postion.pnl
+    def sell_stock(self, position:Position, quantity):
+        if position.quantity == quantity:
+            self.capital_invested -= position.margin + position.pnl
+            self.cash += position.margin + position.pnl
             self.capital = self.cash + self.capital_invested
-            self.positions.remove(postion)
-            postion.close()
-        elif postion.quantity > quantity:
-            percentage = quantity / postion.quantity
-            self.capital_invested -=( postion.margin + postion.pnl) * percentage
-            self.cash += (postion.margin + postion.pnl) * percentage
+            self.positions[position.ticker] = None
+            position.close()
+        elif position.quantity > quantity:
+            percentage = quantity / position.quantity
+            self.capital_invested -=( position.margin + position.pnl) * percentage
+            self.cash += (position.margin + position.pnl) * percentage
             self.capital = self.cash + self.capital_invested
-            postion.remove_quantity(quantity)
+            position.remove_quantity(quantity)
         else:
             print("Not enough stock to sell")
             

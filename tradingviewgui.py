@@ -13,12 +13,7 @@ Data_df = pd.DataFrame(Data)
 Data_df = Data_df.rename(columns={'datetime': 'date'})
 Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
 
-cash = 10000
-stock = "EUR/USD"
-aktien = {stock: 0}
-running = True
-
-def buy():
+def buy(ticker, user: backend.User):
     new_window = QDialog()
     new_window.setWindowTitle("Buy")
     new_window.resize(400, 300)
@@ -45,8 +40,26 @@ def buy():
     layout.addLayout(button_layout)
 
     def kaufen():
-        stockcount = int(input_field.text())
-        value = stockcount * Data_df["close"].iloc[-1]
+        while True:
+            try:
+                quantity = int(input_field.text())
+                break
+            except:
+                #catch edge case, when user hasnt entered a quantity
+                QMessageBox.information(window, "Title", "Bitte gebe eine Menge an!")
+                return
+        
+        value = quantity * Data_df["close"].iloc[-1]
+        #integrating backend:
+        if user.cash >= value:
+            user.buy_stock(ticker, quantity, Data_df["close"].iloc[-1], leverage=1, type='long')
+            clabel.setText(f"Cash: {user.cash}")
+            alabel.setText(f"{ticker}: {user.positions[ticker].quantity}")
+            new_window.close()
+        else:
+            QMessageBox.information(window, "Title", "Zu arm für den Aktienpreis")
+            
+        """ old code:
         global cash
         if cash >= value:
             aktien[stock] += stockcount
@@ -56,7 +69,7 @@ def buy():
             alabel.setText(f"{stock}: {aktien[stock]}")
             new_window.close()
         else:
-            QMessageBox.information(window, "Title", "Zu arm für den Aktienpreis")
+            QMessageBox.information(window, "Title", "Zu arm für den Aktienpreis")"""
     
     def close_window():
         new_window.close()
@@ -68,7 +81,7 @@ def buy():
     new_window.exec_()
 
     
-def sell():
+def sell(ticker, user):
     new_window = QDialog()
     new_window.setWindowTitle("Sell")
     new_window.resize(400, 300)
@@ -95,7 +108,34 @@ def sell():
     layout.addLayout(button_layout)
 
     def verkaufen():
-        stockcount = int(input_field.text())
+        while True:
+            try:
+                quantity = int(input_field.text())
+                break
+            except:
+                #catch edge case, when user hasnt entered a quantity
+                QMessageBox.information(window, "Title", "Bitte gebe eine Menge an!")
+                return
+        #with integrated backend:
+        """
+        1. sell the stock
+        2. if the new quantity would be zero, the backend deletes the whole object
+        3. use try-except
+        """
+        try:
+            if user.positions[ticker].quantity >= quantity:
+                user.sell_stock(user.positions[ticker], quantity)
+                clabel.setText(f"Cash: {user.cash}")
+                try:
+                    alabel.setText(f"{ticker}: {user.positions[stock].quantity}")
+                except:
+                    alabel.setText(f"{ticker}: {0}")
+                new_window.close()
+            else:
+                QMessageBox.information(window, "Title", "Nicht genug Aktien im Besitz")
+        except:
+            QMessageBox.information(window, "Title", "Von dieser Aktie gibt es keine offene Position")
+        """ old code:
         if aktien[stock] >= stockcount:
             aktien[stock] -= stockcount
             global cash
@@ -104,7 +144,7 @@ def sell():
             alabel.setText(f"{stock}: {aktien[stock]}")
             new_window.close()
         else:
-            QMessageBox.information(window, "Title", "Nicht genug Aktien im Besitz")
+            QMessageBox.information(window, "Title", "Nicht genug Aktien im Besitz")"""
         
     def close_window():
         new_window.close()
@@ -147,6 +187,13 @@ def update():
 #     chart.topbar.textbox('clock', 'dings')
 #     chart.topbar.button('my_button', 'Off', func=on_button_press)
 #     chart.show(block=True)
+
+cash = 10000
+stock = "EUR/USD"
+aktien = {stock: 0}
+running = True
+user1 = backend.User("name", cash=cash) #create a user in the backend
+"""to do: pop up window which lets the user enter a name"""
     
 app = QApplication([])
 window = QMainWindow()
@@ -208,8 +255,9 @@ sell_button.setStyleSheet("background-color: red; color: white; font-size: 18px;
 
 layout.addLayout(btn_layout)
 
-buy_button.clicked.connect(buy)
-sell_button.clicked.connect(sell)
+buy_button.clicked.connect(lambda: buy(user=user1, ticker=stock))
+#using lambad because it makes it possible to pass a function with arguments as an argument
+sell_button.clicked.connect(lambda: sell(user=user1, ticker=stock))
 
 widget.setLayout(layout)
 window.setCentralWidget(widget)
