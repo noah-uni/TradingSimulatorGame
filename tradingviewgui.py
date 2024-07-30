@@ -57,7 +57,7 @@ def buy(ticker, user: backend.User):
             alabel.setText(f"{ticker}: {user.positions[ticker].quantity}")
             new_window.close()
         else:
-            QMessageBox.information(window, "Title", "Zu arm für den Aktienpreis")
+            QMessageBox.information(window, "Title", "Nicht genug Cash")
             
         """ old code:
         global cash

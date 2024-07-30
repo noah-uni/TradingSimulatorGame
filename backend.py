@@ -104,19 +104,15 @@ class User:
             self.capital_invested += margin
             self.cash -= margin
             self.capital = self.cash + self.capital_invested
-            self.positions[ticker] = Position(ticker, quantity, price, leverage, margin, type)
-            print(f"{self.name} bought Stock {ticker} with Leverage: {leverage}")
-        
-        elif ticker in [position.ticker for position in self.positions]:
-            margin = (quantity * price) / leverage
-            self.capital_invested += margin
-            self.cash -= margin
-            self.capital = self.cash + self.capital_invested
-            #get the position that already exists with the same ticker
-            position = self.positions[ticker]
-            #position = next((position for position in self.positions if position.ticker == ticker), None) 
-            position.add_quantity(quantity, margin, price)
-            print(f"{self.name} bought Stock {ticker} with Leverage: {leverage}")
+            if ticker in self.positions:
+                #get the position that already exists with the same ticker
+                position = self.positions[ticker]
+                #position = next((position for position in self.positions if position.ticker == ticker), None) 
+                position.add_quantity(quantity, margin, price)
+            else:
+                self.positions[ticker] = Position(ticker, quantity, price, leverage, margin, type)
+            print(f"{self.name} bought Stock {ticker} for {margin}$ with Leverage: {leverage}")
+
         else:
             print("Not enough cash")
 
