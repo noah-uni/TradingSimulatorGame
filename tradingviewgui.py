@@ -11,7 +11,7 @@ Game = backend.GameManager("2022-06-06", ["EUR/USD"])
 Data = Game.get_stock_prices("EUR/USD", "2022-08-09 07:20", "2022-08-10 00:00")
 Data_df = pd.DataFrame(Data)
 Data_df = Data_df.rename(columns={'datetime': 'date'})
-Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
+#Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
 
 def buy(ticker, user: backend.User):
     new_window = QDialog()
@@ -161,20 +161,17 @@ def on_button_press(chart):
     print(f'Turned something {new_button_value.lower()}.')
 
 def update():
-    vonzeit = "00:00"
+    vonzeit = "07:20"
     biszeit = "00:01"
     while running:
         Data = Game.get_stock_prices("EUR/USD", f"2022-08-09 {vonzeit}", f"2022-08-10 {biszeit}")
         Data_df = pd.DataFrame(Data)
         Data_df = Data_df.rename(columns={'datetime': 'date'})
-        Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
-        vonzeit = biszeit
         current_time = datetime.strptime(biszeit, "%H:%M")
         # Increment the time by one minute
         current_time += timedelta(minutes=1)
         # Format the datetime object back to a string and print
         biszeit = current_time.strftime("%H:%M")
-        print(biszeit)
         chart.set(Data_df)
         time.sleep(1)
 
@@ -212,10 +209,9 @@ clabel.setStyleSheet("""
     color: white;
     padding: 10px;
     border-radius: 5px;
-    max-height: 70px;
+    height: 20px;
     display: inline-block;
 """)
-layout.addWidget(clabel)
 
 alabel = QLabel(f"{stock}: {aktien[stock]}")
 alabel.setStyleSheet("""
@@ -224,22 +220,25 @@ alabel.setStyleSheet("""
     color: white;
     padding: 10px;
     border-radius: 5px;
-    max-height: 70px;
+    height: 20px;
     display: inline-block;
 """)
-layout.addWidget(clabel)
 
 text_layout.addWidget(clabel)
 text_layout.addWidget(alabel)
-layout.addLayout(text_layout)
+#text_layout.setSizeConstraint()
+layout.addLayout(text_layout,1)
 
 chart = QtChart(widget)
+
 
 #set chart data
 chart.set(Data_df)
 
+chalayout = QHBoxLayout()
+chalayout.addWidget(chart.get_webview())
 
-layout.addWidget(chart.get_webview())
+layout.addLayout(chalayout,9)
 # Create the buy and sell buttons
 buy_button = QPushButton("Buy")
 sell_button = QPushButton("Sell")

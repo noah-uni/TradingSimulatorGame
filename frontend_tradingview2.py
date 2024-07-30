@@ -38,4 +38,4 @@ if __name__ == '__main__':
             chart.marker(text='The price crossed $20!')
 
         last_close = series['close']
-        sleep(5)
+        sleep(1)
