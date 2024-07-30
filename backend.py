@@ -121,7 +121,7 @@ class User:
             self.capital_invested -= position.margin + position.pnl
             self.cash += position.margin + position.pnl
             self.capital = self.cash + self.capital_invested
-            self.positions[position.ticker] = None
+            del self.positions[position.ticker] 
             position.close()
         elif position.quantity > quantity:
             percentage = quantity / position.quantity
@@ -163,5 +163,6 @@ class GameManager:
                 Data_df = pd.DataFrame(data_btcusd[mask])
                 Data_df.rename(columns={'datetime': 'date'}, inplace=True)
                 Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
+                return Data_df
         else:
             print("Not supported ticker symbol")
