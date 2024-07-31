@@ -8,7 +8,7 @@ api_key = 'HQM041114YXW71OZ'
 ts = TimeSeries(key=api_key, output_format='pandas')
 
 # Get minute-level data for a given symbol (e.g., 'AAPL')
-data, meta_data = ts.get_intraday(symbol='TSLA', interval='1min', outputsize='full', month='January')
+data, meta_data = ts.get_intraday(symbol='TSLA', interval='1min', month="2020-05")
 print(meta_data)
 print(len(data))
 print(data)

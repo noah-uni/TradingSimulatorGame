@@ -11,6 +11,7 @@ interval = 1
 Game = backend.GameManager("2022-06-06", ["EUR/USD", "BTC/USD"])
 Data_df = Game.get_stock_prices("BTC/USD", "2022-08-09 07:20", "2022-08-10 00:00")
 Data_df = Data_df.iloc[::interval, :]
+current_price = Data_df["close"].iloc[-1]
 #Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
 
 def buy(ticker, user: backend.User):
@@ -49,10 +50,10 @@ def buy(ticker, user: backend.User):
                 QMessageBox.information(window, "Title", "Bitte gebe eine Menge an!")
                 return
         
-        value = quantity * Data_df["close"].iloc[-1]
+        value = quantity * current_price
         #integrating backend:
         if user.cash >= value:
-            user.buy_stock(ticker, quantity, Data_df["close"].iloc[-1], leverage=1, type='long')
+            user.buy_stock(ticker, quantity, current_price, leverage=1, type='long')
             clabel.setText(f"Cash: {user.cash}")
             alabel.setText(f"{ticker}: {user.positions[ticker].quantity}")
             new_window.close()
@@ -160,11 +161,11 @@ def on_button_press(chart):
     chart.topbar['my_button'].set(new_button_value)
     print(f'Turned something {new_button_value.lower()}.')
 
-def update():
+def update(ticker, user):
     vonzeit = "07:20"
     biszeit = "00:01"
     while running:
-        Data_df = Game.get_stock_prices("BTC/USD", f"2022-08-09 {vonzeit}", f"2022-08-10 {biszeit}")
+        Data_df = Game.get_stock_prices(ticker, f"2022-08-09 {vonzeit}", f"2022-08-10 {biszeit}")
         Data_df = Data_df.iloc[::interval, :]
         current_time = datetime.strptime(biszeit, "%H:%M")
         # Increment the time by one minute
@@ -172,6 +173,11 @@ def update():
         # Format the datetime object back to a string and print
         biszeit = current_time.strftime("%H:%M")
         chart.set(Data_df)
+        current_price = Data_df["close"].iloc[-1]
+        try: user.update_positions(ticker, current_price)
+        except: pass
+        try: pnllabel.setText(f"{ticker} PNL: {user.positions[ticker].pnl}")
+        except: pass
         time.sleep(0.5)
 
 # if __name__ == '__main__':
@@ -198,8 +204,7 @@ def timechange(chart):
         interval = 60*4
 
 cash = 100000
-stock = "EUR/USD"
-aktien = {stock: 0}
+stock = "BTC/USD"
 running = True
 user1 = backend.User("name", cash=cash) #create a user in the backend
 """to do: pop up window which lets the user enter a name"""
@@ -225,8 +230,19 @@ clabel.setStyleSheet("""
     display: inline-block;
 """)
 
-alabel = QLabel(f"{stock}: {aktien[stock]}")
+alabel = QLabel(f"{stock}: 0")
 alabel.setStyleSheet("""
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    height: 20px;
+    display: inline-block;
+""")
+
+pnllabel = QLabel(f"{stock} PNL: 0")
+pnllabel.setStyleSheet("""
     font-size: 24px;
     font-weight: bold;
     color: white;
@@ -238,6 +254,7 @@ alabel.setStyleSheet("""
 
 text_layout.addWidget(clabel)
 text_layout.addWidget(alabel)
+text_layout.addWidget(pnllabel)
 layout.addLayout(text_layout,1)
 
 chart = QtChart(widget)
@@ -278,7 +295,7 @@ widget.setLayout(layout)
 window.setCentralWidget(widget)
 window.show()
 
-x = threading.Thread(target=update)
+x = threading.Thread(target= lambda: update(stock, user1))
 x.start()
 
 

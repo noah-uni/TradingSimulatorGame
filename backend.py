@@ -111,7 +111,7 @@ class User:
                 position.add_quantity(quantity, margin, price)
             else:
                 self.positions[ticker] = Position(ticker, quantity, price, leverage, margin, type)
-            print(f"{self.name} bought Stock {ticker} for {margin}$ with Leverage: {leverage}")
+            print(f"{self.name} bought Stock {ticker} for {margin}$ with Leverage: {leverage} at {price}")
 
         else:
             print("Not enough cash")
@@ -123,6 +123,7 @@ class User:
             self.capital = self.cash + self.capital_invested
             del self.positions[position.ticker] 
             position.close()
+            print(f"{self.name} sold Stock {position.ticker} for {position.margin}$ with Leverage: {position.leverage} at {position.price}")
         elif position.quantity > quantity:
             percentage = quantity / position.quantity
             self.capital_invested -=( position.margin + position.pnl) * percentage
@@ -131,7 +132,10 @@ class User:
             position.remove_quantity(quantity)
         else:
             print("Not enough stock to sell")
-            
+    
+    def update_positions(self, ticker, price):
+        self.positions[ticker].update_price(price)
+    
     def get_cash(self):
         return self.cash
 
