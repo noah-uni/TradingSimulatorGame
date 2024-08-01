@@ -8,8 +8,9 @@ import threading
 from datetime import datetime, timedelta
 
 interval = 1
+stock = "EUR/USD"
 Game = backend.GameManager("2022-06-06", ["EUR/USD", "BTC/USD"])
-Data_df = Game.get_stock_prices("BTC/USD", "2022-08-09 07:20", "2022-08-10 00:00")
+Data_df = Game.get_stock_prices(stock, "2022-08-09 07:20", "2022-08-10 00:00")
 Data_df = Data_df.iloc[::interval, :]
 current_price = Data_df["close"].iloc[-1]
 #Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
@@ -165,7 +166,7 @@ def update(ticker, user):
     vonzeit = "07:20"
     biszeit = "00:01"
     while running:
-        Data_df = Game.get_stock_prices(ticker, f"2022-08-09 {vonzeit}", f"2022-08-10 {biszeit}")
+        Data_df = Game.get_stock_prices(stock, f"2022-08-09 {vonzeit}", f"2022-08-10 {biszeit}") 
         Data_df = Data_df.iloc[::interval, :]
         current_time = datetime.strptime(biszeit, "%H:%M")
         # Increment the time by one minute
@@ -203,8 +204,11 @@ def timechange(chart):
     elif chart.topbar['timemenu'].value == "4h":
         interval = 60*4
 
+def stockchange(chart):
+    global stock
+    stock = chart.topbar['stock_menu'].value
+
 cash = 100000
-stock = "BTC/USD"
 running = True
 user1 = backend.User("name", cash=cash) #create a user in the backend
 """to do: pop up window which lets the user enter a name"""
@@ -264,6 +268,13 @@ chart.topbar.menu(
     options=('1min', '10min', '30min', '1h', '4h'),
     default='1min',
     func=timechange
+    )
+
+chart.topbar.menu(
+    name='stock_menu',
+    options=( 'BTC/USD', 'EUR/USD'),
+    default= stock,
+    func=stockchange
     )
 #set chart data
 chart.set(Data_df)
