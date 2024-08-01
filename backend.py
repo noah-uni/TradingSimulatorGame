@@ -97,6 +97,7 @@ class User:
         self.capital_invested = 0
         self.capital = self.cash + self.capital_invested
         self.positions: dict[Position] = {}
+        self.current_prices = {}
         
     def buy_stock(self, ticker, quantity, price, leverage, type):
         if quantity*price <= self.cash:
@@ -105,6 +106,7 @@ class User:
             self.cash -= margin
             self.capital = self.cash + self.capital_invested
             if ticker in self.positions:
+                print("yuurrr")
                 #get the position that already exists with the same ticker
                 position = self.positions[ticker]
                 #position = next((position for position in self.positions if position.ticker == ticker), None) 
@@ -121,9 +123,9 @@ class User:
             self.capital_invested -= position.margin + position.pnl
             self.cash += position.margin + position.pnl
             self.capital = self.cash + self.capital_invested
-            del self.positions[position.ticker] 
+            del self.positions[position.ticker]
             position.close()
-            print(f"{self.name} sold Stock {position.ticker} for {position.margin}$ with Leverage: {position.leverage} at {position.price}")
+            print(f"{self.name} sold Stock {position.ticker} for {position.total}$ with Leverage: {position.leverage} at {position.price}")
         elif position.quantity > quantity:
             percentage = quantity / position.quantity
             self.capital_invested -=( position.margin + position.pnl) * percentage
@@ -133,8 +135,21 @@ class User:
         else:
             print("Not enough stock to sell")
     
+    def set_current_prices(self, tickers, prices):
+        for i in range(0, len(tickers)):
+            self.current_prices[tickers[i]] = prices[i]
+    
     def update_positions(self, ticker, price):
-        self.positions[ticker].update_price(price)
+        try:
+            self.positions[ticker].update_price(price)
+            self.capital = self.cash
+            print(self.positions)
+            for total in [position.total for position in self.positions]:
+                print("test2")
+                print(total)
+                self.capital += total
+        except: pass
+        self.set_current_prices([ticker], [price])
     
     def get_cash(self):
         return self.cash

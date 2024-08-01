@@ -50,10 +50,11 @@ def buy(ticker, user: backend.User):
                 QMessageBox.information(window, "Title", "Bitte gebe eine Menge an!")
                 return
         
-        value = quantity * current_price
+        value = quantity * user.current_prices[ticker]
+        print(user.current_prices[ticker])
         #integrating backend:
         if user.cash >= value:
-            user.buy_stock(ticker, quantity, current_price, leverage=1, type='long')
+            user.buy_stock(ticker, quantity, user.current_prices[ticker], leverage=1, type='long')
             clabel.setText(f"Cash: {user.cash}")
             alabel.setText(f"{ticker}: {user.positions[ticker].quantity}")
             new_window.close()
@@ -174,10 +175,10 @@ def update(ticker, user):
         biszeit = current_time.strftime("%H:%M")
         chart.set(Data_df)
         current_price = Data_df["close"].iloc[-1]
-        try: user.update_positions(ticker, current_price)
-        except: pass
+        user.update_positions(ticker, current_price)
         try: pnllabel.setText(f"{ticker} PNL: {user.positions[ticker].pnl}")
         except: pass
+        pvlabel.setText(f"Portfolio Value: {user.capital}")
         time.sleep(0.5)
 
 # if __name__ == '__main__':
@@ -207,6 +208,7 @@ cash = 100000
 stock = "BTC/USD"
 running = True
 user1 = backend.User("name", cash=cash) #create a user in the backend
+user1.set_current_prices([stock], [current_price])
 """to do: pop up window which lets the user enter a name"""
     
 app = QApplication([])
@@ -218,6 +220,17 @@ window.resize(800, 500)
 layout.setContentsMargins(0, 0, 0, 0)
 
 text_layout = QHBoxLayout()
+
+pvlabel = QLabel(f"Portfolio Value: {cash}")
+pvlabel.setStyleSheet("""
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    height: 20px;
+    display: inline-block;
+""")
 
 clabel = QLabel(f"Cash: {cash}")
 clabel.setStyleSheet("""
@@ -251,7 +264,7 @@ pnllabel.setStyleSheet("""
     height: 20px;
     display: inline-block;
 """)
-
+text_layout.addWidget(pvlabel)
 text_layout.addWidget(clabel)
 text_layout.addWidget(alabel)
 text_layout.addWidget(pnllabel)
@@ -288,7 +301,7 @@ sell_button.setStyleSheet("background-color: red; color: white; font-size: 18px;
 layout.addLayout(btn_layout)
 
 buy_button.clicked.connect(lambda: buy(user=user1, ticker=stock))
-#using lambad because it makes it possible to pass a function with arguments as an argument
+#using lambda because it makes it possible to pass a function with arguments as an argument
 sell_button.clicked.connect(lambda: sell(user=user1, ticker=stock))
 
 widget.setLayout(layout)
