@@ -22,13 +22,20 @@ def buy(ticker, user: backend.User):
     new_window.resize(400, 300)
 
     layout = QVBoxLayout()
+    #adding input widgets for margin and leverage:
+    label1 = QLabel("Margin:")
+    layout.addWidget(label1)
+    input_field1 = QLineEdit()
+    layout.addWidget(input_field1)
+    label2 = QLabel("Leverage:")
+    layout.addWidget(label2)
+    input_field2 = QLineEdit()
+    layout.addWidget(input_field2)
     
-    label = QLabel("Anzahl der Aktien:")
-    layout.addWidget(label)
-    
-    input_field = QLineEdit()
-    layout.addWidget(input_field)
-    
+    #adding output widgets for calculated quantity & liquidation price
+    quantity_label = QLabel("Quantity: 0")
+    layout.addWidget(quantity_label)
+
     button_layout = QHBoxLayout()
     
     ok_button = QPushButton("OK")
@@ -45,18 +52,19 @@ def buy(ticker, user: backend.User):
     def kaufen():
         while True:
             try:
-                quantity = int(input_field.text())
+                margin = int(input_field1.text())
+                leverage = int(input_field2.text())
                 break
             except:
                 #catch edge case, when user hasnt entered a quantity
-                QMessageBox.information(window, "Title", "Bitte gebe eine Menge an!")
+                QMessageBox.information(window, "Title", "Bitte gebe eine Menge & Hebel an!")
                 return
+    
         
-        value = quantity * user.current_prices[ticker]
-        print(user.current_prices[ticker])
+        quantity = (margin*leverage)/current_price
         #integrating backend:
-        if user.cash >= value:
-            user.buy_stock(ticker, quantity, user.current_prices[ticker], leverage=1, type='long')
+        if user.cash >= margin:
+            user.buy_stock(ticker, margin, user.current_prices[ticker], leverage, type='long')
             clabel.setText(f"Cash: {user.cash}")
             alabel.setText(f"{ticker}: {user.positions[ticker].quantity}")
             new_window.close()

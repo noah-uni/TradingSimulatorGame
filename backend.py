@@ -99,9 +99,9 @@ class User:
         self.positions = {}
         self.current_prices = {}
         
-    def buy_stock(self, ticker, quantity, price, leverage, type):
-        if quantity*price <= self.cash:
-            margin = (quantity * price) / leverage
+    def buy_stock(self, ticker, margin, price, leverage, type):
+        quantity = (margin*leverage)/price
+        if margin <= self.cash:
             self.capital_invested += margin
             self.cash -= margin
             self.capital = self.cash + self.capital_invested
@@ -139,8 +139,8 @@ class User:
         try: self.positions[ticker].update_price(price)
         except: pass
         self.capital = self.cash
-        for total in [position.total for position in self.positions.values()]:
-            self.capital += total
+        for position in self.positions.values():
+            self.capital += position.pnl + position.margin
         self.set_current_prices(ticker, price)
     
     def get_cash(self):
