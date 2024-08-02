@@ -163,7 +163,7 @@ def on_button_press(chart):
     chart.topbar['my_button'].set(new_button_value)
     print(f'Turned something {new_button_value.lower()}.')
 
-def update(ticker, user):
+def update(user):
     vonzeit = "07:20"
     biszeit = "00:01"
     while running:
@@ -176,9 +176,11 @@ def update(ticker, user):
         biszeit = current_time.strftime("%H:%M")
         chart.set(Data_df)
         current_price = Data_df["close"].iloc[-1]
-        user.update_positions(ticker, current_price)
-        try: pnllabel.setText(f"{ticker} PNL: {user.positions[ticker].pnl}")
-        except: pass
+        user.update_positions(stock, current_price)
+        try: pnllabel.setText(f"{stock} PNL: {user.positions[stock].pnl}")
+        except: pnllabel.setText(f"{stock} PNL: 0")
+        try: alabel.setText(f"{stock}: {user.positions[stock].quantity}")
+        except: alabel.setText(f"{stock}: 0")
         pvlabel.setText(f"Portfolio Value: {user.capital}")
         time.sleep(0.5)
 
@@ -208,11 +210,11 @@ def timechange(chart):
 def stockchange(chart):
     global stock
     stock = chart.topbar['stock_menu'].value
-
+    
 cash = 100000
 running = True
 user1 = backend.User("name", cash=cash) #create a user in the backend
-user1.set_current_prices([stock], [current_price])
+#user1.set_current_prices(stock, current_price)
 """to do: pop up window which lets the user enter a name"""
     
 app = QApplication([])
@@ -319,7 +321,7 @@ widget.setLayout(layout)
 window.setCentralWidget(widget)
 window.show()
 
-x = threading.Thread(target= lambda: update(stock, user1))
+x = threading.Thread(target= lambda: update(user1))
 x.start()
 
 
