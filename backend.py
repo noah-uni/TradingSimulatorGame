@@ -139,7 +139,6 @@ class User:
         try: self.positions[ticker].update_price(price)
         except: pass
         self.capital = self.cash
-        print(self.positions)
         for total in [position.total for position in self.positions.values()]:
             self.capital += total
         self.set_current_prices(ticker, price)

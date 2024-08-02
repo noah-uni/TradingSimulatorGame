@@ -9,7 +9,8 @@ from datetime import datetime, timedelta
 
 interval = 1
 stock = "EUR/USD"
-Game = backend.GameManager("2022-06-06", ["EUR/USD", "BTC/USD"])
+all_stocks = ["EUR/USD", "BTC/USD"]
+Game = backend.GameManager("2022-06-06", all_stocks)
 Data_df = Game.get_stock_prices(stock, "2022-08-09 07:20", "2022-08-10 00:00")
 Data_df = Data_df.iloc[::interval, :]
 current_price = Data_df["close"].iloc[-1]
@@ -181,6 +182,12 @@ def update(user):
         except: pnllabel.setText(f"{stock} PNL: 0")
         try: alabel.setText(f"{stock}: {user.positions[stock].quantity}")
         except: alabel.setText(f"{stock}: 0")
+        #update all other stocks so portfolio value is correctly updated:
+        current_date = Data_df["date"].iloc[-1]
+        for ticker in all_stocks:
+            if ticker != stock:
+                Data_df_2 = Game.get_stock_prices(ticker, current_date, current_date)
+                user.update_positions(ticker, Data_df_2["close"][0])
         pvlabel.setText(f"Portfolio Value: {user.capital}")
         time.sleep(0.5)
 
