@@ -115,20 +115,22 @@ class User:
         else:
             print("Not enough cash")
 
-    def sell_stock(self, position:Position, quantity):
-        if position.quantity == quantity:
+    def sell_stock(self, position:Position, percentage):
+        quantity_to_sell = position.quantity * percentage
+        
+        if position.quantity == quantity_to_sell:
             self.capital_invested -= position.margin + position.pnl
             self.cash += position.margin + position.pnl
             self.capital = self.cash + self.capital_invested
             del self.positions[position.ticker]
             position.close()
             print(f"{self.name} sold Stock {position.ticker} for {position.total}$ with Leverage: {position.leverage} at {position.price}")
-        elif position.quantity > quantity:
-            percentage = quantity / position.quantity
+        elif position.quantity > quantity_to_sell:
+            percentage = quantity_to_sell / position.quantity
             self.capital_invested -=( position.margin + position.pnl) * percentage
             self.cash += (position.margin + position.pnl) * percentage
             self.capital = self.cash + self.capital_invested
-            position.remove_quantity(quantity)
+            position.remove_quantity(quantity_to_sell)
         else:
             print("Not enough stock to sell")
     

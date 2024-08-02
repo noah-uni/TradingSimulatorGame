@@ -1,7 +1,8 @@
 import pandas as pd
 from lightweight_charts import Chart
 import backend
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QLabel, QDialog, QLineEdit, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QLabel, QDialog, QLineEdit, QMessageBox, QSlider
+from PyQt5.QtCore import Qt
 from lightweight_charts.widgets import QtChart, QWebEngineView
 import time
 import threading
@@ -17,22 +18,34 @@ current_price = Data_df["close"].iloc[-1]
 #Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
 
 def buy(ticker, user: backend.User):
+    current_price = user.current_prices[ticker]  # Assuming this is how you get the current price
     new_window = QDialog()
     new_window.setWindowTitle("Buy")
     new_window.resize(400, 300)
 
     layout = QVBoxLayout()
-    #adding input widgets for margin and leverage:
+    
+    # Adding input widgets for margin and leverage:
     label1 = QLabel("Margin:")
     layout.addWidget(label1)
     input_field1 = QLineEdit()
     layout.addWidget(input_field1)
-    label2 = QLabel("Leverage:")
-    layout.addWidget(label2)
-    input_field2 = QLineEdit()
-    layout.addWidget(input_field2)
     
-    #adding output widgets for calculated quantity & liquidation price
+    label2 = QLabel("Leverage: 1")
+    layout.addWidget(label2)
+
+    def update_percentage_label(value):
+        label2.setText(f"Leverage: {value}")
+    slider = QSlider(Qt.Horizontal)
+    slider.setMinimum(1)
+    slider.setMaximum(200)
+    slider.setValue(1)  # Default value
+    layout.addWidget(slider)
+
+    # Connect the slider's valueChanged signal to update the label
+    slider.valueChanged.connect(update_percentage_label)
+    
+    # Adding output widget for calculated quantity
     quantity_label = QLabel("Quantity: 0")
     layout.addWidget(quantity_label)
 
@@ -49,40 +62,35 @@ def buy(ticker, user: backend.User):
     
     layout.addLayout(button_layout)
 
+    def update_quantity():
+        try:
+            margin = int(input_field1.text())
+            leverage = int(slider.value())
+            quantity = (margin * leverage) / current_price
+            quantity_label.setText(f"Quantity: {quantity:.2f}")
+        except ValueError:
+            quantity_label.setText("Quantity: Invalid input")
+
+    # Connect the textChanged signals to the update_quantity function
+    input_field1.textChanged.connect(update_quantity)
+    slider.valueChanged.connect(update_quantity)
+
     def kaufen():
-        while True:
-            try:
-                margin = int(input_field1.text())
-                leverage = int(input_field2.text())
-                break
-            except:
-                #catch edge case, when user hasnt entered a quantity
-                QMessageBox.information(window, "Title", "Bitte gebe eine Menge & Hebel an!")
-                return
-    
-        
-        quantity = (margin*leverage)/current_price
-        #integrating backend:
-        if user.cash >= margin:
-            user.buy_stock(ticker, margin, user.current_prices[ticker], leverage, type='long')
-            clabel.setText(f"Cash: {user.cash}")
-            alabel.setText(f"{ticker}: {user.positions[ticker].quantity}")
-            new_window.close()
-        else:
-            QMessageBox.information(window, "Title", "Nicht genug Cash")
-            
-        """ old code:
-        global cash
-        if cash >= value:
-            aktien[stock] += stockcount
-            cash -= value
-            print("cash: ", cash)
-            clabel.setText(f"Cash: {cash}")
-            alabel.setText(f"{stock}: {aktien[stock]}")
-            new_window.close()
-        else:
-            QMessageBox.information(window, "Title", "Zu arm für den Aktienpreis")"""
-    
+        try:
+            margin = int(input_field1.text())
+            leverage = int(slider.value())
+            quantity = (margin * leverage) / current_price
+
+            if user.cash >= margin:
+                user.buy_stock(ticker, margin, current_price, leverage, type='long')
+                clabel.setText(f"Cash: {user.cash}")
+                alabel.setText(f"{ticker}: {user.positions[ticker].quantity}")
+                new_window.close()
+            else:
+                QMessageBox.information(new_window, "Title", "Nicht genug Cash")
+        except ValueError:
+            QMessageBox.information(new_window, "Title", "Bitte gebe eine Menge & Hebel an!")
+
     def close_window():
         new_window.close()
 
@@ -100,11 +108,20 @@ def sell(ticker, user):
 
     layout = QVBoxLayout()
     
-    label = QLabel("Anzahl der Aktien:")
-    layout.addWidget(label)
+    label1 = QLabel("Prozent der Anzahl der Aktien: 50%")
+    layout.addWidget(label1)
     
-    input_field = QLineEdit()
-    layout.addWidget(input_field)
+    slider = QSlider(Qt.Horizontal)
+    slider.setMinimum(1)
+    slider.setMaximum(100)
+    slider.setValue(50)  # Default value
+    layout.addWidget(slider)
+
+    def update_percentage_label(value):
+        label1.setText(f"Prozent der Anzahl der Aktien: {value}%")
+
+    # Connect the slider's valueChanged signal to update the label
+    slider.valueChanged.connect(update_percentage_label)
     
     button_layout = QHBoxLayout()
     
@@ -122,7 +139,7 @@ def sell(ticker, user):
     def verkaufen():
         while True:
             try:
-                quantity = int(input_field.text())
+                percentage = slider.value() / 100
                 break
             except:
                 #catch edge case, when user hasnt entered a quantity
@@ -135,16 +152,13 @@ def sell(ticker, user):
         3. use try-except
         """
         try:
-            if user.positions[ticker].quantity >= quantity:
-                user.sell_stock(user.positions[ticker], quantity)
-                clabel.setText(f"Cash: {user.cash}")
-                try:
-                    alabel.setText(f"{ticker}: {user.positions[stock].quantity}")
-                except:
-                    alabel.setText(f"{ticker}: {0}")
-                new_window.close()
-            else:
-                QMessageBox.information(window, "Title", "Nicht genug Aktien im Besitz")
+            user.sell_stock(user.positions[ticker], percentage)
+            clabel.setText(f"Cash: {user.cash}")
+            try:
+                alabel.setText(f"{ticker}: {user.positions[stock].quantity}")
+            except:
+                alabel.setText(f"{ticker}: {0}")
+            new_window.close()
         except:
             QMessageBox.information(window, "Title", "Von dieser Aktie gibt es keine offene Position")
         """ old code:
@@ -302,7 +316,7 @@ chart.topbar.menu(
 
 chart.topbar.menu(
     name='stock_menu',
-    options=( 'BTC/USD', 'EUR/USD'),
+    options=('BTC/USD', 'EUR/USD'),
     default= stock,
     func=stockchange
     )
