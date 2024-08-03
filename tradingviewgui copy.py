@@ -375,59 +375,25 @@ class Positions_Window(QDialog):
         self.layout.addWidget(label)
         # Set up the layout and add labels containing position data
         for position in self.positions.values():
-            if position.pnl >= 0:
-                pnl_type = "pnl_positiv"
-            else:
-                pnl_type = "pnl_negativ"
             label_data = [
-                (position.ticker, QLabel, "header"),
-                ("Current Data", QLabel, "small header"),
-                (f"Position size: {position.total}", QLabel, "normal"),
-                (f"PNL: {position.pnl}", QLabel, pnl_type),
-                (f"Preis: {position.price}", QLabel, "normal"),
-                ("Data at Opening", QLabel, "small header"),
-                (f"Preis: {position.price_whenopened}", QLabel, "normal"),
-                (f"Position size: {position.total_whenopened}", QLabel, "normal"),
-                (f"Margin: {position.margin}", QLabel, "normal"),
-                (f"Quantity: {position.quantity}", QLabel, "normal"),
-                (f"Type: {position.type}", QLabel, "normal"),
-                (f"Leverage: {position.leverage}", QLabel, "normal"),
-                (f"Liquidation Price: {position.liquidation_price}", QLabel, "normal")
+                (position.ticker, QLabel),
+                ("Current Data", QLabel),
+                (f"Position size: {position.total}", QLabel),
+                (f"PNL: {position.pnl}", QLabel),
+                (f"Preis: {position.price}", QLabel),
+                ("Data at Opening", QLabel),
+                (f"Preis: {position.price_whenopened}", QLabel),
+                (f"Position size: {position.total_whenopened}", QLabel),
+                (f"Margin: {position.margin}", QLabel),
+                (f"Quantity: {position.quantity}", QLabel),
+                (f"Type: {position.type}", QLabel),
+                (f"Leverage: {position.leverage}", QLabel),
+                (f"Liquidation Price: {position.liquidation_price} /n test", QLabel)
             ]
         # Add each label to the layout
             try: 
-                for text, label_class, type in label_data:
+                for text, label_class in label_data:
                     label = label_class(text)
-                    if type == "header":
-                        font_size = "18px"
-                        margin = "2px"
-                        background_color = "#34495e"
-                    elif type == "small header":
-                        font_size = "14px"
-                        margin = "1px"
-                        background_color = "#34495e"
-                    elif type == "pnl_positiv":
-                        font_size = "12px"
-                        margin = "0.5px"
-                        background_color = "#2ecc71"
-                    elif type == "pnl_negativ":
-                        font_size = "12px"
-                        margin = "0.5px"
-                        background_color = "#e74c3c"
-                    else:
-                        font_size = "12px"
-                        margin = "0.5px"
-                        background_color = "#34495e"
-                    
-                    label.setStyleSheet(f"""
-                    font-size: {font_size};
-                    font-weight: bold;
-                    color: "white";
-                    background-color: {background_color};
-                    padding: 2px;
-                    border-radius: 5px;
-                    margin: {margin};
-                """)
                     self.layout.addWidget(label)
             except:
                 pass
@@ -436,7 +402,7 @@ class Positions_Window(QDialog):
             label = QLabel(f"You have no open positions!")
             self.layout.addWidget(label)
         self.setLayout(self.layout)
-
+       
 def open_positions_widget(window):
     # Create an instance of the new widget and show it
     window.new_widget = Positions_Window(user1.positions)
@@ -445,6 +411,11 @@ def open_positions_widget(window):
 button_show_positions = QPushButton("Positions: Show More")
 button_show_positions.clicked.connect(lambda: open_positions_widget(window))  # Connect the button to the slot
 text_layout.addWidget(button_show_positions)
+
+# Create a central widget
+"""container_positions = QWidget()
+container_positions.setLayout(layout)
+window.setCentralWidget(container_positions)"""
 
 widget.setLayout(layout)
 window.setCentralWidget(widget)
