@@ -35,7 +35,7 @@ def buy(ticker, user: backend.User):
     layout.addWidget(label2)
 
     def update_percentage_label(value):
-        label2.setText(f"Leverage: {value}")
+        label2.setText(f"Leverage: {value:.2f}")
     slider = QSlider(Qt.Horizontal)
     slider.setMinimum(1)
     slider.setMaximum(200)
@@ -82,8 +82,8 @@ def buy(ticker, user: backend.User):
 
             if user.cash >= margin:
                 user.buy_stock(ticker, margin, current_price, leverage, type='long')
-                clabel.setText(f"Cash: {user.cash}")
-                alabel.setText(f"{ticker}: {user.positions[ticker].quantity}")
+                cashlabel.setText(f"Cash: {user.cash:.2f}")
+                quantitylabel.setText(f"{ticker}: {user.positions[ticker].quantity:.2f}")
                 new_window.close()
                 chart.marker(shape="circle", text=f"Bought {ticker}")
             else:
@@ -153,11 +153,11 @@ def sell(ticker, user):
         """
         try:
             user.sell_stock(user.positions[ticker], percentage)
-            clabel.setText(f"Cash: {user.cash}")
+            cashlabel.setText(f"Cash: {user.cash:.2f}")
             try:
-                alabel.setText(f"{ticker}: {user.positions[stock].quantity}")
+                quantitylabel.setText(f"{ticker}: {user.positions[stock].quantity}")
             except:
-                alabel.setText(f"{ticker}: {0}")
+                quantitylabel.setText(f"{ticker}: {0}")
             chart.marker(shape="circle", text=f"Sold {ticker}")
             new_window.close()
         except:
@@ -195,10 +195,10 @@ def update(user):
         #check for possible liquidation
         if result == "Liquidation":
             chart.marker(time=current_date, shape="circle", text=f"Position {stock} was liquidated")
-        try: pnllabel.setText(f"{stock} PNL: {user.positions[stock].pnl}")
+        try: pnllabel.setText(f"{stock} PNL: {user.positions[stock].pnl:.2f}")
         except: pnllabel.setText(f"{stock} PNL: 0")
-        try: alabel.setText(f"{stock}: {user.positions[stock].quantity}")
-        except: alabel.setText(f"{stock}: 0")
+        try: quantitylabel.setText(f"{stock}: {user.positions[stock].quantity:.2f}")
+        except: quantitylabel.setText(f"{stock}: 0")
         #update all other stocks so portfolio value is correctly updated:
         for ticker in all_stocks:
             if ticker != stock:
@@ -209,8 +209,8 @@ def update(user):
                         chart.marker(time=current_date, shape="circle", text=f"Position {ticker} was liquidated")
                 except: print(f"Missing Data in Df {ticker}")
 
-        pvlabel.setText(f"Portfolio Value: {user.capital}")
-        clabel.setText(f"Cash: {user.cash}")
+        pvlabel.setText(f"Portfolio Value: {user.capital:.2f}")
+        cashlabel.setText(f"Cash: {user.cash:.2f}")
         time.sleep(0.5)
 
 # if __name__ == '__main__':
@@ -267,8 +267,8 @@ pvlabel.setStyleSheet("""
     display: inline-block;
 """)
 
-clabel = QLabel(f"Cash: {cash}")
-clabel.setStyleSheet("""
+cashlabel = QLabel(f"Cash: {cash}")
+cashlabel.setStyleSheet("""
     font-size: 24px;
     font-weight: bold;
     color: white;
@@ -278,8 +278,8 @@ clabel.setStyleSheet("""
     display: inline-block;
 """)
 
-alabel = QLabel(f"{stock}: 0")
-alabel.setStyleSheet("""
+quantitylabel = QLabel(f"{stock}: 0")
+quantitylabel.setStyleSheet("""
     font-size: 24px;
     font-weight: bold;
     color: white;
@@ -300,8 +300,8 @@ pnllabel.setStyleSheet("""
     display: inline-block;
 """)
 text_layout.addWidget(pvlabel)
-text_layout.addWidget(clabel)
-text_layout.addWidget(alabel)
+text_layout.addWidget(cashlabel)
+text_layout.addWidget(quantitylabel)
 text_layout.addWidget(pnllabel)
 layout.addLayout(text_layout,1)
 
@@ -315,7 +315,7 @@ chart.topbar.menu(
 
 chart.topbar.menu(
     name='stock_menu',
-    options=('BTC/USD', 'EUR/USD'),
+    options=('EUR/USD', 'BTC/USD'),
     default= stock,
     func=stockchange
     )
