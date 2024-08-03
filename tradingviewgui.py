@@ -79,13 +79,13 @@ def buy(ticker, user: backend.User):
         try:
             margin = int(input_field1.text())
             leverage = int(slider.value())
-            quantity = (margin * leverage) / current_price
 
             if user.cash >= margin:
                 user.buy_stock(ticker, margin, current_price, leverage, type='long')
                 clabel.setText(f"Cash: {user.cash}")
                 alabel.setText(f"{ticker}: {user.positions[ticker].quantity}")
                 new_window.close()
+                chart.marker(shape="circle", text=f"Bought {ticker}")
             else:
                 QMessageBox.information(new_window, "Title", "Nicht genug Cash")
         except ValueError:
@@ -158,19 +158,10 @@ def sell(ticker, user):
                 alabel.setText(f"{ticker}: {user.positions[stock].quantity}")
             except:
                 alabel.setText(f"{ticker}: {0}")
+            chart.marker(shape="circle", text=f"Sold {ticker}")
             new_window.close()
         except:
             QMessageBox.information(window, "Title", "Von dieser Aktie gibt es keine offene Position")
-        """ old code:
-        if aktien[stock] >= stockcount:
-            aktien[stock] -= stockcount
-            global cash
-            cash += stockcount * Data_df["close"].iloc[-1]
-            clabel.setText(f"Cash: {cash}")
-            alabel.setText(f"{stock}: {aktien[stock]}")
-            new_window.close()
-        else:
-            QMessageBox.information(window, "Title", "Nicht genug Aktien im Besitz")"""
         
     def close_window():
         new_window.close()
@@ -199,18 +190,27 @@ def update(user):
         biszeit = current_time.strftime("%H:%M")
         chart.set(Data_df)
         current_price = Data_df["close"].iloc[-1]
-        user.update_positions(stock, current_price)
+        current_date = Data_df["date"].iloc[-1]
+        result = user.update_positions(stock, current_price)
+        #check for possible liquidation
+        if result == "Liquidation":
+            chart.marker(time=current_date, shape="circle", text=f"Position {stock} was liquidated")
         try: pnllabel.setText(f"{stock} PNL: {user.positions[stock].pnl}")
         except: pnllabel.setText(f"{stock} PNL: 0")
         try: alabel.setText(f"{stock}: {user.positions[stock].quantity}")
         except: alabel.setText(f"{stock}: 0")
         #update all other stocks so portfolio value is correctly updated:
-        current_date = Data_df["date"].iloc[-1]
         for ticker in all_stocks:
             if ticker != stock:
                 Data_df_2 = Game.get_stock_prices(ticker, current_date, current_date)
-                user.update_positions(ticker, Data_df_2["close"][0])
+                try: 
+                    result = user.update_positions(ticker, Data_df_2["close"][0])
+                    if result == "Liquidation":
+                        chart.marker(time=current_date, shape="circle", text=f"Position {ticker} was liquidated")
+                except: print(f"Missing Data in Df {ticker}")
+
         pvlabel.setText(f"Portfolio Value: {user.capital}")
+        clabel.setText(f"Cash: {user.cash}")
         time.sleep(0.5)
 
 # if __name__ == '__main__':
@@ -306,7 +306,6 @@ text_layout.addWidget(pnllabel)
 layout.addLayout(text_layout,1)
 
 chart = QtChart(widget)
-
 chart.topbar.menu(
     name='timemenu',
     options=('1min', '10min', '30min', '1h', '4h'),

@@ -59,6 +59,7 @@ class Position:
         self.margin = margin
         self.pnl = 0
         self.type = type
+        self.liquidation_price = self.price_whenopened * (1 - 1/leverage)
 
     def add_quantity(self, quantity_to_add, margin_to_add, price):
         self.quantity = self.quantity + quantity_to_add
@@ -75,10 +76,17 @@ class Position:
         self.margin = self.margin * (1-percentage)
         self.pnl = self.total - self.total_whenopened
         
-    def update_price(self, new_price):
+    def update_price(self, new_price, user):
         self.price = new_price
         self.total = self.quantity * self.price
         self.pnl = self.total - self.total_whenopened
+        if new_price <= self.liquidation_price:
+            print(f"Postion {self.ticker} was liquidated with remaining Margin: {self.margin+self.pnl}")
+            user.cash += self.margin+self.pnl
+            del user.positions[self.ticker]
+            self.close()
+            return "Liquidation"
+        return ""
         
     
     def close(self):
@@ -138,12 +146,14 @@ class User:
             self.current_prices[ticker] = price
     
     def update_positions(self, ticker, price):
-        try: self.positions[ticker].update_price(price)
+        result = ""
+        try: result = self.positions[ticker].update_price(price, self)
         except: pass
         self.capital = self.cash
         for position in self.positions.values():
             self.capital += position.pnl + position.margin
         self.set_current_prices(ticker, price)
+        return result
     
     def get_cash(self):
         return self.cash
