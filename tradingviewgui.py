@@ -85,7 +85,7 @@ def buy(ticker, user: backend.User):
                 cashlabel.setText(f"Cash: {user.cash:.2f}")
                 quantitylabel.setText(f"{ticker}: {user.positions[ticker].quantity:.2f}")
                 new_window.close()
-                chart.marker(shape="circle", text=f"Bought {ticker}")
+                chart.marker(shape="circle", text=f"Bought {ticker}", color="green")
             else:
                 QMessageBox.information(new_window, "Title", "Nicht genug Cash")
         except ValueError:
@@ -158,7 +158,7 @@ def sell(ticker, user):
                 quantitylabel.setText(f"{ticker}: {user.positions[stock].quantity}")
             except:
                 quantitylabel.setText(f"{ticker}: {0}")
-            chart.marker(shape="circle", text=f"Sold {ticker}")
+            chart.marker(shape="circle", text=f"Sold {ticker}", color="red")
             new_window.close()
         except:
             QMessageBox.information(window, "Title", "Von dieser Aktie gibt es keine offene Position")
@@ -195,10 +195,12 @@ def update(user):
         #check for possible liquidation
         if result == "Liquidation":
             chart.marker(time=current_date, shape="circle", text=f"Position {stock} was liquidated")
-        try: pnllabel.setText(f"{stock} PNL: {user.positions[stock].pnl:.2f}")
-        except: pnllabel.setText(f"{stock} PNL: 0")
-        try: quantitylabel.setText(f"{stock}: {user.positions[stock].quantity:.2f}")
-        except: quantitylabel.setText(f"{stock}: 0")
+        #update pnl data
+        try: pnllabel.setText(f"Total PNL: {sum([position.pnl for position in user.positions.values()]):.2f}")
+        except: pnllabel.setText(f"Total PNL: 0")
+        #update quantity data
+        try: quantitylabel.setText(f"Quantity {stock}: {user.positions[stock].quantity:.2f}")
+        except: quantitylabel.setText(f"Quantity {stock}: 0")
         #update all other stocks so portfolio value is correctly updated:
         for ticker in all_stocks:
             if ticker != stock:
@@ -250,7 +252,6 @@ app = QApplication([])
 window = QMainWindow()
 layout = QVBoxLayout()
 widget = QWidget()
-
 window.resize(800, 500)
 layout.setContentsMargins(0, 0, 0, 0)
 
@@ -344,6 +345,60 @@ layout.addLayout(btn_layout)
 buy_button.clicked.connect(lambda: buy(user=user1, ticker=stock))
 #using lambda because it makes it possible to pass a function with arguments as an argument
 sell_button.clicked.connect(lambda: sell(user=user1, ticker=stock))
+
+#create a widget that displays position information and pops up when a button is clicked
+class Positions_Window(QDialog):
+    def __init__(self, positions):
+        super().__init__()
+        self.setWindowTitle("Positions")
+        self.setGeometry(150, 150, 300, 200)
+        layout = QVBoxLayout()
+        label = QLabel(f"All open Positions:")
+        layout.addWidget(label)
+        # Set up the layout and add labels containing position data
+        for position in positions.values():
+            label_data = [
+                (position.ticker, QLabel),
+                ("Current Data", QLabel),
+                (f"Position size: {position.total}", QLabel),
+                (f"PNL: {position.pnl}", QLabel),
+                (f"Preis: {position.price}", QLabel),
+                ("Data at Opening", QLabel),
+                (f"Preis: {position.price_whenopened}", QLabel),
+                (f"Position size: {position.total_whenopened}", QLabel),
+                (f"Margin: {position.margin}", QLabel),
+                (f"Quantity: {position.quantity}", QLabel),
+                (f"Type: {position.type}", QLabel),
+                (f"Leverage: {position.leverage}", QLabel),
+                (f"Liquidation Price: {position.liquidation_price}", QLabel)
+            ]
+        # Add each label to the layout
+            try: 
+                for text, label_class in label_data:
+                    label = label_class(text)
+                    layout.addWidget(label)
+            except:
+                pass
+        # Check if any labels have been added -> if there are open positions
+        try: label_data
+        except:
+            label = QLabel(f"You have no open positions!")
+            layout.addWidget(label)
+        self.setLayout(layout)
+       
+def open_positions_widget(window):
+    # Create an instance of the new widget and show it
+    window.new_widget = Positions_Window(user1.positions)
+    window.new_widget.show()
+
+button_show_positions = QPushButton("Positions: Show More")
+button_show_positions.clicked.connect(lambda: open_positions_widget(window))  # Connect the button to the slot
+text_layout.addWidget(button_show_positions)
+
+# Create a central widget
+"""container_positions = QWidget()
+container_positions.setLayout(layout)
+window.setCentralWidget(container_positions)"""
 
 widget.setLayout(layout)
 window.setCentralWidget(widget)
