@@ -302,8 +302,8 @@ pnllabel.setStyleSheet("""
 """)
 text_layout.addWidget(pvlabel)
 text_layout.addWidget(cashlabel)
-text_layout.addWidget(quantitylabel)
 text_layout.addWidget(pnllabel)
+text_layout.addWidget(quantitylabel)
 layout.addLayout(text_layout,1)
 
 chart = QtChart(widget)
@@ -314,10 +314,10 @@ chart.topbar.menu(
     func=timechange
     )
 
-chart.topbar.menu(
+chart.topbar.switcher(
     name='stock_menu',
-    options=('EUR/USD', 'BTC/USD'),
-    default= stock,
+    options=("EUR/USD", "BTC/USD"),
+    default=stock,
     func=stockchange
     )
 #set chart data
