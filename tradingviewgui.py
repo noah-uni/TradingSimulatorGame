@@ -238,8 +238,8 @@ def update(user):
         if result == "Liquidation":
             chart.marker(time=current_date, shape="circle", text=f"Position {stock} was liquidated")
         #update pnl data
-        try: pnllabel.setText(f"Total PNL: {sum([position.pnl for position in user.positions.values()]):.2f}")
-        except: pnllabel.setText(f"Total PNL: 0")
+        try: pnllabel.setText(f"Total unrealized PNL: {sum([position.pnl for position in user.positions.values()]):.2f}")
+        except: pnllabel.setText(f"Total unrealized PNL: 0")
         #update quantity data
         try: quantitylabel.setText(f"Quantity {stock}: {user.positions[stock].quantity:.2f}")
         except: quantitylabel.setText(f"Quantity {stock}: 0")
@@ -321,7 +321,7 @@ cashlabel.setStyleSheet("""
     display: inline-block;
 """)
 
-quantitylabel = QLabel(f"{stock}: 0")
+quantitylabel = QLabel(f"Quantity {stock}: 0")
 quantitylabel.setStyleSheet("""
     font-size: 24px;
     font-weight: bold;
@@ -332,7 +332,7 @@ quantitylabel.setStyleSheet("""
     display: inline-block;
 """)
 
-pnllabel = QLabel(f"{stock} PNL: 0")
+pnllabel = QLabel(f"{stock} unrealized PNL: 0")
 pnllabel.setStyleSheet("""
     font-size: 24px;
     font-weight: bold;
