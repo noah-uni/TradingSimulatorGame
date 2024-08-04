@@ -1,7 +1,20 @@
 import pandas as pd
 from lightweight_charts import Chart
 import backend
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QLabel, QDialog, QLineEdit, QMessageBox, QSlider
+from PyQt5.QtWidgets import (
+    QApplication, 
+    QMainWindow, 
+    QVBoxLayout, 
+    QHBoxLayout, 
+    QWidget, 
+    QPushButton, 
+    QLabel, 
+    QDialog, 
+    QLineEdit, 
+    QMessageBox, 
+    QSlider,
+    QRadioButton
+    )
 from PyQt5.QtCore import Qt, QTimer
 from lightweight_charts.widgets import QtChart, QWebEngineView
 import time
@@ -33,6 +46,15 @@ def buy(ticker, user: backend.User):
     
     label2 = QLabel("Leverage: 1")
     layout.addWidget(label2)
+
+    long_radio = QRadioButton("Long")
+    short_radio = QRadioButton("Short")
+    long_radio.setChecked(True)  # Default to Long
+
+    radio_layout = QHBoxLayout()
+    radio_layout.addWidget(long_radio)
+    radio_layout.addWidget(short_radio)
+    layout.addLayout(radio_layout)
 
     def update_percentage_label(value):
         label2.setText(f"Leverage: {value:.2f}")
@@ -79,9 +101,10 @@ def buy(ticker, user: backend.User):
         try:
             margin = int(input_field1.text())
             leverage = int(slider.value())
+            position_type = "long" if long_radio.isChecked() else "short"
 
             if user.cash >= margin:
-                user.buy_stock(ticker, margin, current_price, leverage, type='long')
+                user.buy_stock(ticker, margin, current_price, leverage, type=position_type)
                 cashlabel.setText(f"Cash: {user.cash:.2f}")
                 quantitylabel.setText(f"{ticker}: {user.positions[ticker].quantity:.2f}")
                 new_window.close()
@@ -110,6 +133,15 @@ def sell(ticker, user):
     
     label1 = QLabel("Prozent der Anzahl der Aktien: 50%")
     layout.addWidget(label1)
+
+    long_radio = QRadioButton("Long")
+    short_radio = QRadioButton("Short")
+    long_radio.setChecked(True)  # Default to Long
+
+    radio_layout = QHBoxLayout()
+    radio_layout.addWidget(long_radio)
+    radio_layout.addWidget(short_radio)
+    layout.addLayout(radio_layout)
     
     slider = QSlider(Qt.Horizontal)
     slider.setMinimum(1)
@@ -152,6 +184,7 @@ def sell(ticker, user):
         3. use try-except
         """
         try:
+            position_type = "long" if long_radio.isChecked() else "short"
             user.sell_stock(user.positions[ticker], percentage)
             cashlabel.setText(f"Cash: {user.cash:.2f}")
             try:
@@ -178,16 +211,25 @@ def on_button_press(chart):
     print(f'Turned something {new_button_value.lower()}.')
 
 def update(user):
-    vonzeit = "07:20"
-    biszeit = "00:01"
+    vonzeit = "2022-08-09 07:20"
+    biszeit = "2022-08-10 00:01"
     while running:
-        Data_df = Game.get_stock_prices(stock, f"2022-08-09 {vonzeit}", f"2022-08-10 {biszeit}") 
-        Data_df = Data_df.iloc[::interval, :]
-        current_time = datetime.strptime(biszeit, "%H:%M")
+        Data_df = Game.get_stock_prices(stock, vonzeit, biszeit) 
+        #close und open angleichen wenn intervall größer als eine minute ist
+        if interval > 1:
+            tempData_df = Data_df.iloc[interval-1::interval, :].reset_index(drop=True)
+            Data_df = Data_df.iloc[::interval, :].reset_index(drop=True)
+            min_length = min(len(Data_df), len(tempData_df))
+            Data_df = Data_df.iloc[:min_length, :]
+            #Close Positionen von der Reihe davor übernehmen
+            Data_df["close"] = tempData_df["close"]
+
+        #Format the string to a datetime object
+        current_time = datetime.strptime(biszeit, "%Y-%m-%d %H:%M")
         # Increment the time by one minute
         current_time += timedelta(minutes=interval)
         # Format the datetime object back to a string and print
-        biszeit = current_time.strftime("%H:%M")
+        biszeit = current_time.strftime("%Y-%m-%d %H:%M")
         chart.set(Data_df)
         current_price = Data_df["close"].iloc[-1]
         current_date = Data_df["date"].iloc[-1]

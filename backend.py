@@ -118,7 +118,7 @@ class User:
                 position.add_quantity(quantity, margin, price)
             else:
                 self.positions[ticker] = Position(ticker, quantity, price, leverage, margin, type)
-            print(f"{self.name} bought Stock {ticker} for {margin}$ with Leverage: {leverage} at {price}")
+            print(f"{self.name} bought Stock {ticker} of the type {type} for {margin}$ with Leverage: {leverage} at {price}")
 
         else:
             print("Not enough cash")
