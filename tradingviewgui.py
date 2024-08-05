@@ -56,6 +56,25 @@ def buy(ticker, user: backend.User):
     radio_layout.addWidget(short_radio)
     layout.addLayout(radio_layout)
 
+    def radio_clicked(ticker):
+        if long_radio.isChecked():
+            if ticker.startswith("Inverse "):
+                ticker = ticker.removeprefix("Inverse ")
+        elif short_radio.isChecked():
+            if not ticker.startswith("Inverse "):
+                ticker = "Inverse " + ticker
+        return ticker
+
+    def on_radio_clicked():
+        nonlocal ticker, current_price
+        ticker = radio_clicked(ticker)
+        current_price = user.current_prices[ticker]
+        update_quantity()
+
+    long_radio.toggled.connect(on_radio_clicked)
+    short_radio.toggled.connect(on_radio_clicked)
+
+
     def update_percentage_label(value):
         label2.setText(f"Leverage: {value:.2f}")
     slider = QSlider(Qt.Horizontal)
@@ -184,7 +203,15 @@ def sell(ticker, user):
         3. use try-except
         """
         try:
-            position_type = "long" if long_radio.isChecked() else "short"
+            # ticker wird invertiert, wenn short ausgewählt wurde
+            nonlocal ticker
+            if long_radio.isChecked():
+                if ticker.startswith("Inverse "):
+                    ticker = ticker.removeprefix("Inverse ")
+            elif short_radio.isChecked():
+                if not ticker.startswith("Inverse "):
+                    ticker = "Inverse " + ticker
+            print(ticker)
             user.sell_stock(user.positions[ticker], percentage)
             cashlabel.setText(f"Cash: {user.cash:.2f}")
             try:

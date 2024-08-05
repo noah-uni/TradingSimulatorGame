@@ -164,38 +164,26 @@ class GameManager:
     def __init__(self, start_date, tickers) -> None:
         self.start_date = start_date
         self.tickers = tickers
-        
+
+    #Eigene Methode für Dataframe Verarbeitung
+    def get_data_frame(self, data_source, start_date, end_date):
+        mask = (data_source['datetime'] >= start_date) & (data_source['datetime'] <= end_date)
+        Data_df = pd.DataFrame(data_source[mask])
+        Data_df.rename(columns={'datetime': 'date'}, inplace=True)
+        Data_df['date'] = Data_df['date'].map(lambda x: str(x) + '+00:00')
+        return Data_df
     
     def get_stock_prices(self, ticker, start_date, end_date):
         start_date = np.datetime64(start_date, 'm')
         end_date = np.datetime64(end_date, 'm')
         if ticker in self.tickers:
             if ticker == 'EUR/USD':
-                # Create a boolean mask
-                mask = (data_eurusd['datetime'] >= start_date) & (data_eurusd['datetime'] <= end_date)
-                Data_df = pd.DataFrame(data_eurusd[mask])
-                Data_df.rename(columns={'datetime': 'date'}, inplace=True)
-                Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
-                return Data_df
+                return self.get_data_frame(data_eurusd, start_date, end_date)
             elif ticker == 'BTC/USD':
-                mask = (data_btcusd['datetime'] >= start_date) & (data_btcusd['datetime'] <= end_date)
-                Data_df = pd.DataFrame(data_btcusd[mask])
-                Data_df.rename(columns={'datetime': 'date'}, inplace=True)
-                Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
-                return Data_df
+                return self.get_data_frame(data_btcusd, start_date, end_date)
             elif ticker == "Inverse EUR/USD":
-                # Create a boolean mask
-                mask = (inverted["EUR/USD"]['datetime'] >= start_date) & (inverted["EUR/USD"]['datetime'] <= end_date)
-                Data_df = pd.DataFrame(inverted["EUR/USD"][mask])
-                Data_df.rename(columns={'datetime': 'date'}, inplace=True)
-                Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
-                return Data_df
+                return self.get_data_frame(inverted["EUR/USD"], start_date, end_date)
             elif ticker == "Inverse BTC/USD":
-                # Create a boolean mask
-                mask = (inverted["BTC/USD"]['datetime'] >= start_date) & (inverted["BTC/USD"]['datetime'] <= end_date)
-                Data_df = pd.DataFrame(inverted["BTC/USD"][mask])
-                Data_df.rename(columns={'datetime': 'date'}, inplace=True)
-                Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
-                return Data_df
+                return self.get_data_frame(inverted["BTC/USD"], start_date, end_date)
         else:
             print("Not supported ticker symbol")
