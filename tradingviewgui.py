@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 
 interval = 1
 stock = "EUR/USD"
-all_stocks = ["EUR/USD", "BTC/USD", "Inverse EUR/USD", "Inverse BTC/USD"]
+all_stocks = ["EUR/USD", "BTC/USD"]
 Game = backend.GameManager("2022-06-06", all_stocks)
 Data_df = Game.get_stock_prices(stock, "2022-08-09 07:20", "2022-08-10 00:00")
 Data_df = Data_df.iloc[::interval, :]
@@ -212,7 +212,7 @@ def on_button_press(chart):
 
 def update(user):
     vonzeit = "2022-08-09 07:20"
-    biszeit = "2022-08-10 00:00"
+    biszeit = "2022-08-10 00:01"
     while running:
         Data_df = Game.get_stock_prices(stock, vonzeit, biszeit) 
         #close und open angleichen wenn intervall größer als eine minute ist
@@ -221,7 +221,7 @@ def update(user):
             Data_df = Data_df.iloc[::interval, :].reset_index(drop=True)
             min_length = min(len(Data_df), len(tempData_df))
             Data_df = Data_df.iloc[:min_length, :]
-            #Close Positionen von der Zeile davor übernehmen
+            #Close Positionen von der Reihe davor übernehmen
             Data_df["close"] = tempData_df["close"]
 
         #Format the string to a datetime object
@@ -248,7 +248,7 @@ def update(user):
             if ticker != stock:
                 Data_df_2 = Game.get_stock_prices(ticker, current_date, current_date)
                 try: 
-                    result = user.update_positions(ticker, Data_df_2["close"].iloc[0])
+                    result = user.update_positions(ticker, Data_df_2["close"][0])
                     if result == "Liquidation":
                         chart.marker(time=current_date, shape="circle", text=f"Position {ticker} was liquidated")
                 except: print(f"Missing Data in Df {ticker}")
@@ -358,7 +358,7 @@ chart.topbar.menu(
 
 chart.topbar.switcher(
     name='stock_menu',
-    options=(all_stocks),
+    options=("EUR/USD", "BTC/USD"),
     default=stock,
     func=stockchange
     )

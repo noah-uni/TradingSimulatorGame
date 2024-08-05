@@ -11,25 +11,37 @@ dtype = np.dtype([
     ('close', 'f4')
 ])
 
-eurusd_file = "eurusd_2021to2024.csv"
-btcusd_file = "btcusd_2022to2024.csv"
-
 # Read the CSV file
-data_eurusd = pd.read_csv('./Data/'+eurusd_file)
+df_eurusd = pd.read_csv('./Data/eurusd_2021to2024.csv')
 
 # Convert the datetime column to datetime64
-data_eurusd['datetime'] = pd.to_datetime(data_eurusd['datetime'])
+df_eurusd['datetime'] = pd.to_datetime(df_eurusd['datetime'])
+
+# Create the structured array
+data_eurusd = np.zeros(len(df_eurusd), dtype=dtype)
+
+# Fill the structured array with data from the dataframe
+data_eurusd['datetime'] = df_eurusd['datetime'].values.astype('datetime64[m]')
+data_eurusd['open'] = df_eurusd['open'].values
+data_eurusd['high'] = df_eurusd['high'].values
+data_eurusd['low'] = df_eurusd['low'].values
+data_eurusd['close'] = df_eurusd['close'].values
 
 # Read the CSV file
-data_btcusd = pd.read_csv('./Data/'+btcusd_file)
+df_btcusd = pd.read_csv('./Data/btcusd_2022to2024.csv')
 
 # Convert the datetime column to datetime64
-data_btcusd['datetime'] = pd.to_datetime(data_btcusd['datetime'])
+df_btcusd['datetime'] = pd.to_datetime(df_btcusd['datetime'])
 
-inverse_data_eurusd = pd.read_csv('./Data/inverse_' + eurusd_file)
-inverse_data_eurusd['datetime'] = pd.to_datetime(data_btcusd['datetime'])
-inverse_data_btcusd = pd.read_csv('./Data/inverse_' + btcusd_file)
-inverse_data_btcusd['datetime'] = pd.to_datetime(data_btcusd['datetime'])
+# Create the structured array
+data_btcusd = np.zeros(len(df_btcusd), dtype=dtype)
+
+# Fill the structured array with data from the dataframe
+data_btcusd['datetime'] = df_btcusd['datetime'].values.astype('datetime64[m]')
+data_btcusd['open'] = df_btcusd['open'].values
+data_btcusd['high'] = df_btcusd['high'].values
+data_btcusd['low'] = df_btcusd['low'].values
+data_btcusd['close'] = df_btcusd['close'].values
 
 """
 Klasse für Positionen, soll bei jedem kauf geöffnet werden und bei jedem verkauf geschlossen
@@ -172,20 +184,6 @@ class GameManager:
             elif ticker == 'BTC/USD':
                 mask = (data_btcusd['datetime'] >= start_date) & (data_btcusd['datetime'] <= end_date)
                 Data_df = pd.DataFrame(data_btcusd[mask])
-                Data_df.rename(columns={'datetime': 'date'}, inplace=True)
-                Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
-                return Data_df
-            elif ticker == "Inverse EUR/USD":
-                # Create a boolean mask
-                mask = (inverse_data_eurusd['datetime'] >= start_date) & (inverse_data_eurusd['datetime'] <= end_date)
-                Data_df = pd.DataFrame(inverse_data_eurusd[mask])
-                Data_df.rename(columns={'datetime': 'date'}, inplace=True)
-                Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
-                return Data_df
-            elif ticker == "Inverse BTC/USD":
-                # Create a boolean mask
-                mask = (inverse_data_btcusd['datetime'] >= start_date) & (inverse_data_btcusd['datetime'] <= end_date)
-                Data_df = pd.DataFrame(inverse_data_btcusd[mask])
                 Data_df.rename(columns={'datetime': 'date'}, inplace=True)
                 Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
                 return Data_df
