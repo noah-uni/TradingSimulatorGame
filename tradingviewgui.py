@@ -15,12 +15,13 @@ from PyQt5.QtWidgets import (
     QSlider,
     QRadioButton
     )
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject, QThread
 from lightweight_charts.widgets import QtChart, QWebEngineView
 import time
 import threading
 from datetime import datetime, timedelta
 
+thecountdown = 10
 interval = 1
 stock = "EUR/USD"
 all_stocks = ["EUR/USD", "BTC/USD", "Inverse EUR/USD", "Inverse BTC/USD"]
@@ -294,6 +295,20 @@ def update(user):
 #     chart.topbar.button('my_button', 'Off', func=on_button_press)
 #     chart.show(block=True)
 
+def end_screen():
+    new_window = QDialog()
+    new_window.setWindowTitle("Time is up!")
+    new_window.resize(400, 300)
+
+    layout = QVBoxLayout()
+    
+    # Adding input widgets for margin and leverage:
+    label1 = QLabel(f"You've made: {user1.capital-100000} dollars ")
+    layout.addWidget(label1)
+
+    new_window.setLayout(layout)
+    new_window.exec_()
+
 def timechange(chart):
     global interval
     if chart.topbar['timemenu'].value == "1min":
@@ -323,6 +338,18 @@ layout = QVBoxLayout()
 widget = QWidget()
 window.resize(800, 500)
 layout.setContentsMargins(0, 0, 0, 0)
+
+timerlabel = QLabel(f"Time left: ")
+timerlabel.setStyleSheet("""
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    height: 20px;
+    display: inline-block;
+""")
+layout.addWidget(timerlabel)
 
 text_layout = QHBoxLayout()
 
@@ -373,7 +400,7 @@ text_layout.addWidget(pvlabel)
 text_layout.addWidget(cashlabel)
 text_layout.addWidget(pnllabel)
 text_layout.addWidget(quantitylabel)
-layout.addLayout(text_layout,1)
+layout.addLayout(text_layout,2)
 
 chart = QtChart(widget)
 chart.topbar.menu(
@@ -385,7 +412,7 @@ chart.topbar.menu(
 
 chart.topbar.switcher(
     name='stock_menu',
-    options=(all_stocks),
+    options=("EUR/USD", "BTC/USD"),
     default=stock,
     func=stockchange
     )
@@ -395,7 +422,7 @@ chart.set(Data_df)
 chalayout = QHBoxLayout()
 chalayout.addWidget(chart.get_webview())
 
-layout.addLayout(chalayout,9)
+layout.addLayout(chalayout,8)
 # Create the buy and sell buttons
 buy_button = QPushButton("Buy")
 sell_button = QPushButton("Sell")
@@ -511,6 +538,35 @@ def open_positions_widget(window):
     window.new_widget = Positions_Window(user1.positions)
     window.new_widget.show()
 
+#class for timer countdown
+class CountdownWorker(QObject):
+    finished = pyqtSignal()
+    def __init__(self, seconds):
+        super().__init__()
+        self.seconds = seconds
+
+    def start(self):
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_time)
+        self.timer.start(1000)  # 1 second interval
+
+    def update_time(self):
+        global running
+        if self.seconds >= 0 and running:
+            mins, secs = divmod(self.seconds, 60)
+            timer_text = f'{mins:02d}:{secs:02d}'
+            timerlabel.setText(f"Time left: {timer_text}")
+            # Emit the finished signal when the countdown is done
+            if self.seconds == 0:
+                running = False
+                self.timer.stop()
+                self.finished.emit()
+            self.seconds -= 1
+
+    def stop(self):
+        self.timer.stop()
+
+        
 button_show_positions = QPushButton("Positions: Show More")
 button_show_positions.clicked.connect(lambda: open_positions_widget(window))  # Connect the button to the slot
 text_layout.addWidget(button_show_positions)
@@ -522,6 +578,13 @@ window.show()
 x = threading.Thread(target= lambda: update(user1))
 x.start()
 
+worker = CountdownWorker(thecountdown)  # Set countdown time in seconds
+worker.finished.connect(end_screen)
+
+thread = QThread()
+worker.moveToThread(thread)
+thread.started.connect(worker.start)
+thread.start()
 
 app.exec_()
 running = False
