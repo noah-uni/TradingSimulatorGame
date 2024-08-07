@@ -292,7 +292,8 @@ def update(user):
         pvlabel.setText(f"Portfolio Value: {user.capital:.2f}")
         cashlabel.setText(f"Cash: {user.cash:.2f}")
 
-        client.send_profit(user.capital - 100000)
+        if pvp:
+            client.send_profit(user.capital - 100000)
         time.sleep(0.5)
 
 # if __name__ == '__main__':
@@ -537,7 +538,6 @@ timerlabel.setStyleSheet("""
     padding: 10px;
     border-radius: 5px;
     height: 20px;
-    display: inline-block;
 """)
 layout.addWidget(timerlabel)
 
@@ -551,7 +551,6 @@ pvlabel.setStyleSheet("""
     padding: 10px;
     border-radius: 5px;
     height: 20px;
-    display: inline-block;
 """)
 
 cashlabel = QLabel(f"Cash: {cash}")
@@ -562,7 +561,6 @@ cashlabel.setStyleSheet("""
     padding: 10px;
     border-radius: 5px;
     height: 20px;
-    display: inline-block;
 """)
 
 quantitylabel = QLabel(f"Quantity {stock}: 0")
@@ -573,7 +571,6 @@ quantitylabel.setStyleSheet("""
     padding: 10px;
     border-radius: 5px;
     height: 20px;
-    display: inline-block;
 """)
 
 pnllabel = QLabel(f"{stock} unrealized PNL: 0")
@@ -584,7 +581,6 @@ pnllabel.setStyleSheet("""
     padding: 10px;
     border-radius: 5px;
     height: 20px;
-    display: inline-block;
 """)
 text_layout.addWidget(pvlabel)
 text_layout.addWidget(cashlabel)
@@ -623,10 +619,39 @@ btn_layout = QHBoxLayout()
 btn_layout.addWidget(buy_button)
 btn_layout.addWidget(sell_button)
 
-buy_button.setStyleSheet("background-color: green; color: white; font-size: 18px; padding: 10px; display: inline-block; border: 0;")
-sell_button.setStyleSheet("background-color: red; color: white; font-size: 18px; padding: 10px; display: inline-block; border: 0;")
+buy_button.setStyleSheet("""
+    QPushButton {
+        background-color: green;
+        color: white;
+        font-size: 18px;
+        padding: 10px; 
+        border: none;  
+    }
+    QPushButton:hover {
+        background-color: darkgreen; 
+    }
+    QPushButton:pressed {
+        background-color: lightgreen; 
+    }
+""")
+sell_button.setStyleSheet("""
+    QPushButton {
+        background-color: red;
+        color: white;
+        font-size: 18px;
+        padding: 10px;  
+        border: none; 
+    }
+    QPushButton:hover {
+        background-color: darkred;  
+    }
+    QPushButton:pressed {
+        background-color: orange; 
+    }
+""")
 
 layout.addLayout(btn_layout)
+
 
 buy_button.clicked.connect(lambda: buy(user=user1, ticker=stock))
 #using lambda because it makes it possible to pass a function with arguments as an argument
@@ -753,6 +778,35 @@ def end_screen():
     new_window.setLayout(layout)
     new_window.exec_()
 
+#class for timer countdown
+# When the thread closes, the game over screen is opened and running is set to False
+# class CountdownWorker(QObject):
+#     finished = pyqtSignal()
+#     def __init__(self, seconds):
+#         super().__init__()
+#         self.seconds = seconds
+
+#     def start(self):
+#         self.timer = QTimer()
+#         self.timer.timeout.connect(self.update_time)
+#         self.timer.start(1000)  # 1 second interval
+
+#     def update_time(self):
+#         global running
+#         if self.seconds >= 0 and running:
+#             mins, secs = divmod(self.seconds, 60)
+#             timer_text = f'{mins:02d}:{secs:02d}'
+#             timerlabel.setText(f"Time left: {timer_text}")
+#             # Emit the finished signal when the countdown is done
+#             if self.seconds == 0:
+#                 running = False
+#                 self.timer.stop()
+#                 self.finished.emit()
+#             self.seconds -= 1
+
+#     def stop(self):
+#         self.timer.stop()
+    
         
 button_show_positions = QPushButton("Positions: Show More")
 button_show_positions.clicked.connect(lambda: open_positions_widget(window))  # Connect the button to the slot
@@ -765,12 +819,22 @@ window.show()
 x = threading.Thread(target= lambda: update(user1))
 x.start()
 
+if pvp:
+    if client == None:
+        client = GameClient(user1.name)
+    client.start()
 
-if client == None:
-    client = GameClient(user1.name)
-client.start()
+# worker = CountdownWorker(thecountdown)  # Set countdown time in seconds
+# worker.finished.connect(end_screen)
+
+# thread = QThread()
+# worker.moveToThread(thread)
+# thread.started.connect(worker.start)
+# thread.start()
 
 app.exec_()
 running = False
 x.join()
-client.end()
+
+if pvp:
+    client.end()
