@@ -13,15 +13,21 @@ from PyQt5.QtWidgets import (
     QLineEdit, 
     QMessageBox, 
     QSlider,
-    QRadioButton
+    QRadioButton,
+    QInputDialog,
     )
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject, QThread
+from PyQt5.QtGui import QFont
 from lightweight_charts.widgets import QtChart, QWebEngineView
 import time
 import threading
 from datetime import datetime, timedelta
+import socket
+import json
+import threading
 
-thecountdown = 10
+thecountdown = 5
+table = ""
 interval = 1
 stock = "EUR/USD"
 all_stocks = ["EUR/USD", "BTC/USD", "Inverse EUR/USD", "Inverse BTC/USD"]
@@ -283,6 +289,8 @@ def update(user):
 
         pvlabel.setText(f"Portfolio Value: {user.capital:.2f}")
         cashlabel.setText(f"Cash: {user.cash:.2f}")
+
+        client.send_profit(user.capital - 100000)
         time.sleep(0.5)
 
 # if __name__ == '__main__':
@@ -294,20 +302,6 @@ def update(user):
 #     chart.topbar.textbox('clock', 'dings')
 #     chart.topbar.button('my_button', 'Off', func=on_button_press)
 #     chart.show(block=True)
-
-def end_screen():
-    new_window = QDialog()
-    new_window.setWindowTitle("Time is up!")
-    new_window.resize(400, 300)
-
-    layout = QVBoxLayout()
-    
-    # Adding input widgets for margin and leverage:
-    label1 = QLabel(f"You've made: {user1.capital-100000} dollars ")
-    layout.addWidget(label1)
-
-    new_window.setLayout(layout)
-    new_window.exec_()
 
 def timechange(chart):
     global interval
@@ -328,11 +322,55 @@ def stockchange(chart):
     
 cash = 100000
 running = True
-user1 = backend.User("name", cash=cash) #create a user in the backend
+user1 = backend.User("Freddy", cash=cash) #create a user in the backend
 #user1.set_current_prices(stock, current_price)
 """to do: pop up window which lets the user enter a name"""
-    
+
+# app = QApplication([])
+
+# name, ok = QInputDialog.getText(None, 'Starting the game', 'Enter your name:')
+        
+# if ok:
+#     user1.name = name
+
+class NameInputDialog(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.initUI()
+
+    def initUI(self):
+        self.layout = QVBoxLayout()
+
+        self.label = QLabel("Enter your name and click the button:", self)
+        self.label.setFont(QFont("Arial", 14))
+        self.layout.addWidget(self.label)
+
+        self.button = QPushButton("Enter Name", self)
+        self.button.setFont(QFont("Arial", 12))
+        self.button.clicked.connect(self.showDialog)
+        self.layout.addWidget(self.button)
+
+        self.nameLabel = QLabel("", self)
+        self.nameLabel.setFont(QFont("Arial", 14))
+        self.layout.addWidget(self.nameLabel)
+
+        self.setLayout(self.layout)
+        self.setWindowTitle('Name Input Dialog')
+
+    def showDialog(self):
+        name, ok = QInputDialog.getText(self, 'Name Input Dialog', 'Enter your name:', QLineEdit.Normal, "")
+        
+        if ok and name:
+            user1.name = name
+        self.close()
+
+
 app = QApplication([])
+ex = NameInputDialog()
+ex.show()
+app.exec_()
+
 window = QMainWindow()
 layout = QVBoxLayout()
 widget = QWidget()
@@ -538,7 +576,31 @@ def open_positions_widget(window):
     window.new_widget = Positions_Window(user1.positions)
     window.new_widget.show()
 
+
+def end_screen():
+    new_window = QDialog()
+    new_window.setWindowTitle("Time is up!")
+    new_window.resize(400, 300)
+
+    layout = QVBoxLayout()
+    
+    # Adding input widgets for margin and leverage:
+    label1 = QLabel(f"You've made: {user1.capital-100000} dollars ")
+    layout.addWidget(label1)
+
+    stats = ""
+    for key, val in table.items():
+        stats += f"{key} has made {val} dollars \n"
+    playertable = QLabel(stats)
+    playertable.setTextFormat(Qt.PlainText)
+    layout.addWidget(playertable)
+
+    new_window.setLayout(layout)
+    new_window.exec_()
+
+
 #class for timer countdown
+# When the thread closes, the game over screen is opened and running is set to False
 class CountdownWorker(QObject):
     finished = pyqtSignal()
     def __init__(self, seconds):
@@ -565,6 +627,47 @@ class CountdownWorker(QObject):
 
     def stop(self):
         self.timer.stop()
+    
+class GameClient:
+    def __init__(self, player_id, host='localhost', port=12345):
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client.connect((host, port))
+        self.player_id = player_id
+        self.profit = 0
+
+    def send_profit(self, profits):
+        self.profit = profits
+        data = {
+            'player_id': self.player_id,
+            'profit': profits
+        }
+        self.client.send(json.dumps(data).encode('utf-8'))
+
+    def receive_results(self):
+        global running, table
+        while running:
+            try:
+                message = self.client.recv(1024).decode('utf-8')
+                results = json.loads(message)
+                if results['gamestatus'] == "over":
+                    table = results["profit"]
+                print("received:" , results)
+            except ConnectionResetError:
+                break
+            except Exception as e:
+                print("Error while receiving results: ", e)
+
+    def start(self):
+        self.result_thread = threading.Thread(target=self.receive_results)
+        self.result_thread.start()
+
+    def end(self):
+        self.client.close()
+        try:
+            self.client.shutdown(socket.SHUT_RDWR)  # Shut down the socket for both send and receive
+        except OSError as e:
+            pass
+        self.result_thread.join()
 
         
 button_show_positions = QPushButton("Positions: Show More")
@@ -578,6 +681,10 @@ window.show()
 x = threading.Thread(target= lambda: update(user1))
 x.start()
 
+player_id = user1.name
+client = GameClient(player_id)
+client.start()
+
 worker = CountdownWorker(thecountdown)  # Set countdown time in seconds
 worker.finished.connect(end_screen)
 
@@ -589,3 +696,4 @@ thread.start()
 app.exec_()
 running = False
 x.join()
+client.end()
