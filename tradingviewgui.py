@@ -753,36 +753,6 @@ def end_screen():
     new_window.setLayout(layout)
     new_window.exec_()
 
-
-#class for timer countdown
-# When the thread closes, the game over screen is opened and running is set to False
-# class CountdownWorker(QObject):
-#     finished = pyqtSignal()
-#     def __init__(self, seconds):
-#         super().__init__()
-#         self.seconds = seconds
-
-#     def start(self):
-#         self.timer = QTimer()
-#         self.timer.timeout.connect(self.update_time)
-#         self.timer.start(1000)  # 1 second interval
-
-#     def update_time(self):
-#         global running
-#         if self.seconds >= 0 and running:
-#             mins, secs = divmod(self.seconds, 60)
-#             timer_text = f'{mins:02d}:{secs:02d}'
-#             timerlabel.setText(f"Time left: {timer_text}")
-#             # Emit the finished signal when the countdown is done
-#             if self.seconds == 0:
-#                 running = False
-#                 self.timer.stop()
-#                 self.finished.emit()
-#             self.seconds -= 1
-
-#     def stop(self):
-#         self.timer.stop()
-    
         
 button_show_positions = QPushButton("Positions: Show More")
 button_show_positions.clicked.connect(lambda: open_positions_widget(window))  # Connect the button to the slot
@@ -799,14 +769,6 @@ x.start()
 if client == None:
     client = GameClient(user1.name)
 client.start()
-
-# worker = CountdownWorker(thecountdown)  # Set countdown time in seconds
-# worker.finished.connect(end_screen)
-
-# thread = QThread()
-# worker.moveToThread(thread)
-# thread.started.connect(worker.start)
-# thread.start()
 
 app.exec_()
 running = False
