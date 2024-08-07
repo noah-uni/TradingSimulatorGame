@@ -26,8 +26,10 @@ import socket
 import json
 import threading
 
+pvp = True
+client = None
 thecountdown = 5
-table = ""
+table = {}
 interval = 1
 stock = "EUR/USD"
 all_stocks = ["EUR/USD", "BTC/USD", "Inverse EUR/USD", "Inverse BTC/USD"]
@@ -333,6 +335,93 @@ user1 = backend.User("Freddy", cash=cash) #create a user in the backend
 # if ok:
 #     user1.name = name
 
+class GameClient(QObject):
+    end_game_signal = pyqtSignal()
+    def __init__(self, player_id, host='localhost', port=12345):
+        super().__init__()
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client.connect((host, port))
+        self.player_id = player_id
+        self.profit = 0
+
+    def send_profit(self, profits):
+        self.profit = profits
+        data = {
+            'type': 'game',
+            'player_id': self.player_id,
+            'profit': profits
+        }
+        self.client.send(json.dumps(data).encode('utf-8'))
+
+    def receive_results(self):
+        global running, table
+        while running:
+            try:
+                message = self.client.recv(1024).decode('utf-8')
+                results = json.loads(message)
+                if results['type'] == "timer":
+                    timestring = results['time']
+                    timerlabel.setText(f"Time left: {timestring}")
+
+                elif results['type'] == "game over":
+                    running = False
+                    table = results["profit"]
+                    self.end_game_signal.emit()
+
+                print("received:" , results)
+            except ConnectionResetError:
+                break
+            except Exception as e:
+                print("Error while receiving results: ", e)
+
+    def joined(self, label):
+        data = {
+            'type': "lobby",
+            'name': user1.name
+        }
+        self.client.send(json.dumps(data).encode('utf-8'))
+        while running:
+            print("loop")
+            playerlist = self.client.recv(1024).decode('utf-8')
+            players = json.loads(playerlist)
+            print(players)
+            if isinstance(players, dict):
+                break
+            playerstring = " \n ".join(players)
+            label.setText("Players:\n", playerstring)
+        
+    def listen(self, label):
+        t = threading.Thread(target=self.joined, args=(label,))
+        t.start()
+
+    def send(self, data):
+        self.client.sendall(data)
+
+    def receive(self):
+        while running:
+            try:
+                message = self.client.recv(1024).decode('utf-8')
+                players = json.loads(message)
+                print("players", players)
+                yield players
+            except Exception as e:
+                print(f"Error receiving data: {e}")
+                break
+
+    def start(self):
+        self.result_thread = threading.Thread(target=self.receive_results)
+        self.result_thread.start()
+        self.end_game_signal.connect(end_screen)
+
+    def end(self):
+        self.client.close()
+        try:
+            self.client.shutdown(socket.SHUT_RDWR)  # Shut down the socket for both send and receive
+        except OSError as e:
+            pass
+        self.result_thread.join()
+
+
 class NameInputDialog(QWidget):
     def __init__(self):
         super().__init__()
@@ -346,24 +435,87 @@ class NameInputDialog(QWidget):
         self.label.setFont(QFont("Arial", 14))
         self.layout.addWidget(self.label)
 
+        self.single_radio = QRadioButton("Singleplayer")
+        self.multi_radio = QRadioButton("Multiplayer")
+        self.multi_radio.setChecked(True)  # Default to Long
+
+        radio_layout = QHBoxLayout()
+        radio_layout.addWidget(self.single_radio)
+        radio_layout.addWidget(self.multi_radio)
+        self.layout.addLayout(radio_layout)
+
+        self.inputField = QLineEdit(self)
+        self.inputField.setFont(QFont("Arial", 12))
+        self.layout.addWidget(self.inputField)
+
         self.button = QPushButton("Enter Name", self)
         self.button.setFont(QFont("Arial", 12))
-        self.button.clicked.connect(self.showDialog)
+        self.button.clicked.connect(self.resume)
+        
         self.layout.addWidget(self.button)
-
-        self.nameLabel = QLabel("", self)
-        self.nameLabel.setFont(QFont("Arial", 14))
-        self.layout.addWidget(self.nameLabel)
 
         self.setLayout(self.layout)
         self.setWindowTitle('Name Input Dialog')
 
-    def showDialog(self):
-        name, ok = QInputDialog.getText(self, 'Name Input Dialog', 'Enter your name:', QLineEdit.Normal, "")
-        
-        if ok and name:
+    def resume(self):
+        global pvp
+        name = self.inputField.text()
+        if name:
             user1.name = name
-        self.close()
+
+        if self.single_radio.isChecked():
+            pvp = False
+            self.close()
+        elif self.multi_radio.isChecked():
+            pvp = True
+            self.close()
+
+            self.lobby = LobbyWindow()
+            self.lobby.show()   
+    
+
+
+class LobbyWindow(QWidget):
+    start_game_signal = pyqtSignal()
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Lobby")
+        self.setGeometry(100, 100, 400, 200)
+        self.initUI()
+        
+    def initUI(self):
+        global client
+
+        self.layout = QVBoxLayout()
+        self.label = QLabel("Welcome to the Lobby!", self)
+        self.label.setFont(QFont("Arial", 14))
+        self.layout.addWidget(self.label)
+        self.setLayout(self.layout)
+
+        client = GameClient(user1.name)
+        self.start_game_signal.connect(self.close)
+        threading.Thread(target=self.joined, args=(self.label,)).start()
+        
+        #self.close()
+    
+    def joined(self, label):
+        global client
+        data = {
+            'type': "lobby",
+            'name': user1.name
+        }
+        client.send(json.dumps(data).encode('utf-8'))
+        
+        for message in client.receive():
+            if 'players' in message:
+                players = message['players']
+                playerstring = " \n ".join(players)
+                label.setText(playerstring)
+            elif 'start_game' in message and message['start_game']:
+                print("starting game")
+                self.start_game_signal.emit()
+                break
+
 
 
 app = QApplication([])
@@ -578,6 +730,8 @@ def open_positions_widget(window):
 
 
 def end_screen():
+    global pvp
+
     new_window = QDialog()
     new_window.setWindowTitle("Time is up!")
     new_window.resize(400, 300)
@@ -588,87 +742,47 @@ def end_screen():
     label1 = QLabel(f"You've made: {user1.capital-100000} dollars ")
     layout.addWidget(label1)
 
-    stats = ""
-    for key, val in table.items():
-        stats += f"{key} has made {val} dollars \n"
-    playertable = QLabel(stats)
-    playertable.setTextFormat(Qt.PlainText)
-    layout.addWidget(playertable)
-
+    if pvp == True:
+        stats = ""
+        for key, val in table.items():
+            stats += f"{key} has made {val} dollars\n"
+        playertable = QLabel(stats)
+        playertable.setTextFormat(Qt.PlainText)
+        layout.addWidget(playertable)
+    
     new_window.setLayout(layout)
     new_window.exec_()
 
 
 #class for timer countdown
 # When the thread closes, the game over screen is opened and running is set to False
-class CountdownWorker(QObject):
-    finished = pyqtSignal()
-    def __init__(self, seconds):
-        super().__init__()
-        self.seconds = seconds
+# class CountdownWorker(QObject):
+#     finished = pyqtSignal()
+#     def __init__(self, seconds):
+#         super().__init__()
+#         self.seconds = seconds
 
-    def start(self):
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_time)
-        self.timer.start(1000)  # 1 second interval
+#     def start(self):
+#         self.timer = QTimer()
+#         self.timer.timeout.connect(self.update_time)
+#         self.timer.start(1000)  # 1 second interval
 
-    def update_time(self):
-        global running
-        if self.seconds >= 0 and running:
-            mins, secs = divmod(self.seconds, 60)
-            timer_text = f'{mins:02d}:{secs:02d}'
-            timerlabel.setText(f"Time left: {timer_text}")
-            # Emit the finished signal when the countdown is done
-            if self.seconds == 0:
-                running = False
-                self.timer.stop()
-                self.finished.emit()
-            self.seconds -= 1
+#     def update_time(self):
+#         global running
+#         if self.seconds >= 0 and running:
+#             mins, secs = divmod(self.seconds, 60)
+#             timer_text = f'{mins:02d}:{secs:02d}'
+#             timerlabel.setText(f"Time left: {timer_text}")
+#             # Emit the finished signal when the countdown is done
+#             if self.seconds == 0:
+#                 running = False
+#                 self.timer.stop()
+#                 self.finished.emit()
+#             self.seconds -= 1
 
-    def stop(self):
-        self.timer.stop()
+#     def stop(self):
+#         self.timer.stop()
     
-class GameClient:
-    def __init__(self, player_id, host='localhost', port=12345):
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client.connect((host, port))
-        self.player_id = player_id
-        self.profit = 0
-
-    def send_profit(self, profits):
-        self.profit = profits
-        data = {
-            'player_id': self.player_id,
-            'profit': profits
-        }
-        self.client.send(json.dumps(data).encode('utf-8'))
-
-    def receive_results(self):
-        global running, table
-        while running:
-            try:
-                message = self.client.recv(1024).decode('utf-8')
-                results = json.loads(message)
-                if results['gamestatus'] == "over":
-                    table = results["profit"]
-                print("received:" , results)
-            except ConnectionResetError:
-                break
-            except Exception as e:
-                print("Error while receiving results: ", e)
-
-    def start(self):
-        self.result_thread = threading.Thread(target=self.receive_results)
-        self.result_thread.start()
-
-    def end(self):
-        self.client.close()
-        try:
-            self.client.shutdown(socket.SHUT_RDWR)  # Shut down the socket for both send and receive
-        except OSError as e:
-            pass
-        self.result_thread.join()
-
         
 button_show_positions = QPushButton("Positions: Show More")
 button_show_positions.clicked.connect(lambda: open_positions_widget(window))  # Connect the button to the slot
@@ -681,17 +795,18 @@ window.show()
 x = threading.Thread(target= lambda: update(user1))
 x.start()
 
-player_id = user1.name
-client = GameClient(player_id)
+
+if client == None:
+    client = GameClient(user1.name)
 client.start()
 
-worker = CountdownWorker(thecountdown)  # Set countdown time in seconds
-worker.finished.connect(end_screen)
+# worker = CountdownWorker(thecountdown)  # Set countdown time in seconds
+# worker.finished.connect(end_screen)
 
-thread = QThread()
-worker.moveToThread(thread)
-thread.started.connect(worker.start)
-thread.start()
+# thread = QThread()
+# worker.moveToThread(thread)
+# thread.started.connect(worker.start)
+# thread.start()
 
 app.exec_()
 running = False
