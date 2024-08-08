@@ -11,7 +11,7 @@ class GameServer:
         self.clients = []
         self.players = {}
         self.profits = {}
-        self.countdown = 10
+        self.countdown = 60
         self.game_running = True
 
     def counting(self, countdown):

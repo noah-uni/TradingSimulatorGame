@@ -1,4 +1,3 @@
-import pandas as pd
 from lightweight_charts import Chart
 import backend
 from PyQt5.QtWidgets import (
@@ -366,10 +365,6 @@ class GameClient(QObject):
                 break
             except Exception as e:
                 print("Error while receiving results: ", e)
-        
-    def listen(self, label):
-        t = threading.Thread(target=self.joined, args=(label,))
-        t.start()
 
     def send(self, data):
         self.client.sendall(data)
@@ -585,7 +580,7 @@ layout.addLayout(text_layout,1)
 chart = QtChart(widget)
 chart.topbar.menu(
     name='timemenu',
-    options=('1min', '10min', '30min', '1h', '4h'),
+    options=['1min', '10min', '30min', '1h', '4h'],
     default='1min',
     func=timechange
     )
@@ -763,9 +758,12 @@ def end_screen():
     label1 = QLabel(f"You've made: {(user1.capital-100000):.3f} dollars ")
     layout.addWidget(label1)
 
+    #Dictionary nach val sortieren
+    sorted_table = dict(sorted(table.items(), key=lambda item: item[1], reverse=True))
+
     if pvp == True:
         stats = ""
-        for key, val in table.items():
+        for key, val in sorted_table.items():
             stats += f"{key} has made {val:.3f} dollars\n"
         playertable = QLabel(stats)
         playertable.setTextFormat(Qt.PlainText)
