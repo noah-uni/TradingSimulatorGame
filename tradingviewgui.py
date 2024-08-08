@@ -26,6 +26,7 @@ import socket
 import json
 import threading
 
+LOCAL_PORT = 12346
 pvp = True
 client = None
 thecountdown = 5
@@ -296,15 +297,6 @@ def update(user):
             client.send_profit(user.capital - 100000)
         time.sleep(0.5)
 
-# if __name__ == '__main__':
-#     chart = Chart()
-
-#     # Columns: time | open | high | low | close | volume 
-#     #df = pd.read_csv('ohlcv.csv')
-#     chart.set(Data_df)
-#     chart.topbar.textbox('clock', 'dings')
-#     chart.topbar.button('my_button', 'Off', func=on_button_press)
-#     chart.show(block=True)
 
 def timechange(chart):
     global interval
@@ -338,7 +330,7 @@ user1 = backend.User("Freddy", cash=cash) #create a user in the backend
 
 class GameClient(QObject):
     end_game_signal = pyqtSignal()
-    def __init__(self, player_id, host='localhost', port=12345):
+    def __init__(self, player_id, host='localhost', port=LOCAL_PORT):
         super().__init__()
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client.connect((host, port))
@@ -365,31 +357,15 @@ class GameClient(QObject):
                     timerlabel.setText(f"Time left: {timestring}")
 
                 elif results['type'] == "game over":
+                    print("received:" , results)
                     running = False
                     table = results["profit"]
                     self.end_game_signal.emit()
 
-                print("received:" , results)
             except ConnectionResetError:
                 break
             except Exception as e:
                 print("Error while receiving results: ", e)
-
-    def joined(self, label):
-        data = {
-            'type': "lobby",
-            'name': user1.name
-        }
-        self.client.send(json.dumps(data).encode('utf-8'))
-        while running:
-            print("loop")
-            playerlist = self.client.recv(1024).decode('utf-8')
-            players = json.loads(playerlist)
-            print(players)
-            if isinstance(players, dict):
-                break
-            playerstring = " \n ".join(players)
-            label.setText("Players:\n", playerstring)
         
     def listen(self, label):
         t = threading.Thread(target=self.joined, args=(label,))
@@ -398,12 +374,19 @@ class GameClient(QObject):
     def send(self, data):
         self.client.sendall(data)
 
+    def send_ready_status(self):
+        data = {
+            'type': 'ready',
+            'name': self.player_id
+        }
+        self.client.send(json.dumps(data).encode('utf-8'))
+
     def receive(self):
         while running:
             try:
                 message = self.client.recv(1024).decode('utf-8')
                 players = json.loads(message)
-                print("players", players)
+                print("players:", players)
                 yield players
             except Exception as e:
                 print(f"Error receiving data: {e}")
@@ -473,8 +456,7 @@ class NameInputDialog(QWidget):
 
             self.lobby = LobbyWindow()
             self.lobby.show()   
-    
-
+            
 
 class LobbyWindow(QWidget):
     start_game_signal = pyqtSignal()
@@ -497,8 +479,20 @@ class LobbyWindow(QWidget):
         self.start_game_signal.connect(self.close)
         threading.Thread(target=self.joined, args=(self.label,)).start()
         
+        self.ready_button = QPushButton("Ready", self)
+        self.ready_button.clicked.connect(self.send_ready_status)
+        self.layout.addWidget(self.ready_button)
+
+        self.ready_label = QLabel("", self)
+        self.ready_label.setFont(QFont("Arial", 17))
+        self.layout.addWidget(self.ready_label)
         #self.close()
     
+    def send_ready_status(self):
+        client.send_ready_status()
+        self.ready_button.hide()
+        self.ready_label.setText("You are ready!")
+
     def joined(self, label):
         global client
         data = {
@@ -511,7 +505,7 @@ class LobbyWindow(QWidget):
             if 'players' in message:
                 players = message['players']
                 playerstring = " \n ".join(players)
-                label.setText(playerstring)
+                label.setText(f"Players:\n{playerstring}")
             elif 'start_game' in message and message['start_game']:
                 print("starting game")
                 self.start_game_signal.emit()
@@ -664,9 +658,11 @@ class Positions_Window(QDialog):
         self.positions = positions
         self.setWindowTitle("Positions")
         self.setGeometry(150, 150, 300, 200)
-        self.layout = QVBoxLayout()
-        label = QLabel(f"All open Positions:")
-        self.layout.addWidget(label)
+        self.main_layout = QVBoxLayout()
+        
+        # Create a horizontal layout for all positions
+        self.positions_layout = QHBoxLayout()
+        self.main_layout.addLayout(self.positions_layout)
         
         # Start a timer to update the window every second (500 ms)
         self.timer = QTimer(self)
@@ -674,39 +670,41 @@ class Positions_Window(QDialog):
         self.timer.start(500)  # Update every 0.5 second
         
         self.update_labels()  # Initial update
+    
     def update_labels(self):
-        # Clear existing layout
-        while self.layout.count():
-            item = self.layout.takeAt(0)
+        # Clear existing positions layout
+        while self.positions_layout.count():
+            item = self.positions_layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
                 widget.deleteLater()
         
-        label = QLabel("All open Positions:")
-        self.layout.addWidget(label)
-        # Set up the layout and add labels containing position data
-        for position in self.positions.values():
-            if position.pnl >= 0:
-                pnl_type = "pnl_positiv"
-            else:
-                pnl_type = "pnl_negativ"
-            label_data = [
-                (position.ticker, QLabel, "header"),
-                ("Current Data", QLabel, "small header"),
-                (f"Position size: {position.total}", QLabel, "normal"),
-                (f"PNL: {position.pnl}", QLabel, pnl_type),
-                (f"Preis: {position.price}", QLabel, "normal"),
-                ("Data at Opening", QLabel, "small header"),
-                (f"Preis: {position.price_whenopened}", QLabel, "normal"),
-                (f"Position size: {position.total_whenopened}", QLabel, "normal"),
-                (f"Margin: {position.margin}", QLabel, "normal"),
-                (f"Quantity: {position.quantity}", QLabel, "normal"),
-                (f"Type: {position.type}", QLabel, "normal"),
-                (f"Leverage: {position.leverage}", QLabel, "normal"),
-                (f"Liquidation Price: {position.liquidation_price}", QLabel, "normal")
-            ]
-        # Add each label to the layout
-            try: 
+        # Create a QLabel for when there are no open positions
+        if not self.positions:
+            label = QLabel(f"You have no open positions!")
+            self.positions_layout.addWidget(label)
+        else:
+            for position in self.positions.values():
+                # Create a vertical layout for each position's details
+                position_layout = QVBoxLayout()
+                
+                # Populate the vertical layout with position data
+                label_data = [
+                    (position.ticker, QLabel, "header"),
+                    ("Current Data", QLabel, "small header"),
+                    (f"Position size: {position.total}", QLabel, "normal"),
+                    (f"PNL: {position.pnl}", QLabel, "pnl_positiv" if position.pnl >= 0 else "pnl_negativ"),
+                    (f"Preis: {position.price}", QLabel, "normal"),
+                    ("Data at Opening", QLabel, "small header"),
+                    (f"Preis: {position.price_whenopened}", QLabel, "normal"),
+                    (f"Position size: {position.total_whenopened}", QLabel, "normal"),
+                    (f"Margin: {position.margin}", QLabel, "normal"),
+                    (f"Quantity: {position.quantity}", QLabel, "normal"),
+                    (f"Type: {position.type}", QLabel, "normal"),
+                    (f"Leverage: {position.leverage}", QLabel, "normal"),
+                    (f"Liquidation Price: {position.liquidation_price}", QLabel, "normal")
+                ]
+                
                 for text, label_class, type in label_data:
                     label = label_class(text)
                     if type == "header":
@@ -733,20 +731,18 @@ class Positions_Window(QDialog):
                     label.setStyleSheet(f"""
                     font-size: {font_size};
                     font-weight: bold;
-                    color: "white";
+                    color: white;
                     background-color: {background_color};
                     padding: 2px;
                     border-radius: 5px;
                     margin: {margin};
                 """)
-                    self.layout.addWidget(label)
-            except:
-                pass
-        # Check if any labels have been added -> if there are open positions
-        if not self.positions:
-            label = QLabel(f"You have no open positions!")
-            self.layout.addWidget(label)
-        self.setLayout(self.layout)
+                    position_layout.addWidget(label)
+                
+                # Add the position's vertical layout to the horizontal layout
+                self.positions_layout.addLayout(position_layout)
+        
+        self.setLayout(self.main_layout)
 
 def open_positions_widget(window):
     # Create an instance of the new widget and show it
@@ -764,13 +760,13 @@ def end_screen():
     layout = QVBoxLayout()
     
     # Adding input widgets for margin and leverage:
-    label1 = QLabel(f"You've made: {user1.capital-100000} dollars ")
+    label1 = QLabel(f"You've made: {(user1.capital-100000):.3f} dollars ")
     layout.addWidget(label1)
 
     if pvp == True:
         stats = ""
         for key, val in table.items():
-            stats += f"{key} has made {val} dollars\n"
+            stats += f"{key} has made {val:.3f} dollars\n"
         playertable = QLabel(stats)
         playertable.setTextFormat(Qt.PlainText)
         layout.addWidget(playertable)
@@ -779,33 +775,33 @@ def end_screen():
     new_window.exec_()
 
 #class for timer countdown
-# When the thread closes, the game over screen is opened and running is set to False
-# class CountdownWorker(QObject):
-#     finished = pyqtSignal()
-#     def __init__(self, seconds):
-#         super().__init__()
-#         self.seconds = seconds
+#When the thread closes, the game over screen is opened and running is set to False
+class CountdownWorker(QObject):
+    finished = pyqtSignal()
+    def __init__(self, seconds):
+        super().__init__()
+        self.seconds = seconds
 
-#     def start(self):
-#         self.timer = QTimer()
-#         self.timer.timeout.connect(self.update_time)
-#         self.timer.start(1000)  # 1 second interval
+    def start(self):
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update_time)
+        self.timer.start(1000)  # 1 second interval
 
-#     def update_time(self):
-#         global running
-#         if self.seconds >= 0 and running:
-#             mins, secs = divmod(self.seconds, 60)
-#             timer_text = f'{mins:02d}:{secs:02d}'
-#             timerlabel.setText(f"Time left: {timer_text}")
-#             # Emit the finished signal when the countdown is done
-#             if self.seconds == 0:
-#                 running = False
-#                 self.timer.stop()
-#                 self.finished.emit()
-#             self.seconds -= 1
+    def update_time(self):
+        global running
+        if self.seconds >= 0 and running:
+            mins, secs = divmod(self.seconds, 60)
+            timer_text = f'{mins:02d}:{secs:02d}'
+            timerlabel.setText(f"Time left: {timer_text}")
+            # Emit the finished signal when the countdown is done
+            if self.seconds == 0:
+                running = False
+                self.timer.stop()
+                self.finished.emit()
+            self.seconds -= 1
 
-#     def stop(self):
-#         self.timer.stop()
+    def stop(self):
+        self.timer.stop()
     
         
 button_show_positions = QPushButton("Positions: Show More")
@@ -823,14 +819,14 @@ if pvp:
     if client == None:
         client = GameClient(user1.name)
     client.start()
+else:
+    worker = CountdownWorker(thecountdown)  # Set countdown time in seconds
+    worker.finished.connect(end_screen)
 
-# worker = CountdownWorker(thecountdown)  # Set countdown time in seconds
-# worker.finished.connect(end_screen)
-
-# thread = QThread()
-# worker.moveToThread(thread)
-# thread.started.connect(worker.start)
-# thread.start()
+    thread = QThread()
+    worker.moveToThread(thread)
+    thread.started.connect(worker.start)
+    thread.start()
 
 app.exec_()
 running = False

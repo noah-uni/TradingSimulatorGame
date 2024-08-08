@@ -4,19 +4,19 @@ import json
 import time
 
 class GameServer:
-    def __init__(self, host='localhost', port=12345):
+    def __init__(self, host='localhost', port=12346):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.bind((host, port))
         self.server.listen(5)
         self.clients = []
-        self.players = []
+        self.players = {}
         self.profits = {}
         self.countdown = 10
-        self.waiting = {}
+        self.game_running = True
 
     def counting(self, countdown):
         remaining_time = countdown
-        while remaining_time > 0:
+        while remaining_time >= 0:
             mins, secs = divmod(remaining_time, 60)
             timer_text = f'{mins:02d}:{secs:02d}'
             timemessage = {
@@ -39,27 +39,30 @@ class GameServer:
 
                 data = json.loads(message)
                 if data['type'] != None:
-                    #Wenn die Message 'Shutdown' ist, wird die Verbindung abgebrochen
                     if data['type'] == "shutdown":
                         client_socket.close()
                     elif data['type'] == "lobby":
-                        if not data['name'] in self.players:
-                            self.players.append(data['name'])
-                            playerlist = {
-                                'players': self.players
-                            }
-                        self.broadcast(json.dumps(playerlist))
-                        if len(self.players) > 1:
-                            start_message = {
-                                'start_game': True
-                            }
-                            #Kleine Pause bevor das Spiel startet
-                            time.sleep(1)
-                            self.broadcast(json.dumps(start_message))
+                        player_name = data['name']
+                        if player_name not in self.players:
+                            self.players[player_name] = {'ready': False}
+                            self.update_player_list()
+                    elif data['type'] == "ready":
+                        player_name = data['name']
+                        if player_name in self.players:
+                            self.players[player_name]['ready'] = True
+                            self.update_player_list()
 
-                            x = threading.Thread(target=self.counting, args=(self.countdown,))
-                            x.start()
-                    elif data['type'] == "game":
+                            if all(player['ready'] for player in self.players.values()):
+                                start_message = {
+                                    'start_game': True
+                                }
+                                time.sleep(1)
+                                self.game_running = True
+                                self.broadcast(json.dumps(start_message))
+
+                                x = threading.Thread(target=self.counting, args=(self.countdown,))
+                                x.start()
+                    elif data['type'] == "game" and self.game_running:
                         player_id = data['player_id']
                         profit = data['profit']
                         self.profits[player_id] = profit
@@ -75,10 +78,12 @@ class GameServer:
         for client_socket in self.clients:
             client_socket.send(message.encode('utf-8'))
 
-    def start_game(self):
-        message = "start game"
-        for client_socket in self.clients:
-            client_socket.send(message.encode('utf-8'))
+    def update_player_list(self):
+        player_names = list(self.players.keys())
+        playerlist = {
+            'players': player_names
+        }
+        self.broadcast(json.dumps(playerlist))
 
     def broadcast_results(self):
         print("sending data to everyone")
@@ -89,8 +94,8 @@ class GameServer:
         results = json.dumps(data)
         for client_socket in self.clients:
             client_socket.send(results.encode('utf-8'))
-        self.players = []
-        self.profits = {}
+        self.game_running = False
+        self.players = self.profits = {}
 
     def start(self):
         print("Server started...")
