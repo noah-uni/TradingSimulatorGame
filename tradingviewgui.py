@@ -224,7 +224,7 @@ def sell(ticker, user):
             user.sell_stock(user.positions[ticker], percentage)
             cashlabel.setText(f"Cash: {user.cash:.2f}")
             try:
-                quantitylabel.setText(f"{ticker}: {user.positions[stock].quantity}")
+                quantitylabel.setText(f"{ticker}: {user.positions[stock].quantity:.2f}")
             except:
                 quantitylabel.setText(f"{ticker}: {0}")
             chart.marker(shape="circle", text=f"Sold {ticker}", color="red")
@@ -586,7 +586,7 @@ text_layout.addWidget(pvlabel)
 text_layout.addWidget(cashlabel)
 text_layout.addWidget(pnllabel)
 text_layout.addWidget(quantitylabel)
-layout.addLayout(text_layout,2)
+layout.addLayout(text_layout,1)
 
 chart = QtChart(widget)
 chart.topbar.menu(
@@ -608,7 +608,7 @@ chart.set(Data_df)
 chalayout = QHBoxLayout()
 chalayout.addWidget(chart.get_webview())
 
-layout.addLayout(chalayout,8)
+layout.addLayout(chalayout,9)
 # Create the buy and sell buttons
 buy_button = QPushButton("Buy")
 sell_button = QPushButton("Sell")
