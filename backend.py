@@ -52,16 +52,16 @@ class Position:
         self.type = type    #typ: long / short
         self.liquidation_price = self.price_whenopened * (1 - 1/leverage) #liquidationspreis (falls leverage = 1: liquidation_price = 0)
 
+    #falls bereits eine Position exisitiert wird bei abermaligem Kaufen nur die bestehende Position angepasst
     def add_quantity(self, quantity_to_add, margin_to_add, price):
-        #falls bereits eine Position exisitiert wird bei abermaligem Kaufen nur die bestehende Position angepasst
         self.quantity = self.quantity + quantity_to_add
         self.total_whenopened += quantity_to_add * price
         self.total += quantity_to_add * price
         self.margin += margin_to_add
         self.leverage = self.total_whenopened / self.margin
     
+    #analog zu add_quantity, wird bei nur teilweisem schließen einer position benötigt
     def remove_quantity(self, quantity_to_remove):
-        #analog zu add_quantity, wird bei nur teilweisem schließen einer position benötigt
         percentage = quantity_to_remove / self.quantity
         self.quantity = self.quantity - quantity_to_remove
         self.total_whenopened = self.quantity * self.price_whenopened
@@ -69,8 +69,8 @@ class Position:
         self.margin = self.margin * (1-percentage)
         self.pnl = self.total - self.total_whenopened
         
+    #um die Daten der Positionen zu aktualisieren
     def update_price(self, new_price, user):
-        #um die Daten der Positionen zu aktualisieren
         self.price = new_price
         self.total = self.quantity * self.price
         self.pnl = self.total - self.total_whenopened
@@ -99,8 +99,8 @@ class User:
         self.positions = {}
         self.current_prices = {}
         
+    #funktion um Aktien zu kaufen
     def buy_stock(self, ticker, margin, price, leverage, type):
-        #funktion um Aktien zu kaufen
         quantity = (margin*leverage)/price
         if margin <= self.cash:
             self.capital_invested += margin
@@ -116,8 +116,8 @@ class User:
         else:
             print("Not enough cash")
 
+    #funktion um Aktien zu verkaufen
     def sell_stock(self, position:Position, percentage):
-        #funktion um Aktien zu verkaufen
         quantity_to_sell = position.quantity * percentage
         
         if position.quantity == quantity_to_sell:
@@ -136,12 +136,12 @@ class User:
         else:
             print("Not enough stock to sell")
     
+    #setzt die liste mit aktuellen preisen, notwendig um positionen zu aktualisieren
     def set_current_prices(self, ticker, price):
-        #aktualisiert die liste mit aktuellen preisen, notwendig um positionen zu aktualisieren
             self.current_prices[ticker] = price
     
+    #aktualisiert positionen und deren attribute, vor allem PNL sehr wichtig
     def update_positions(self, ticker, price):
-        #aktualisiert positionen und deren attribute, vor allem PNL sehr wichtig
         result = ""
         try: result = self.positions[ticker].update_price(price, self)
         except: pass
@@ -168,16 +168,16 @@ class GameManager:
         self.tickers = tickers
         self.duration = duration
 
+    #Eigene Methode für Dataframe Verarbeitung
     def get_data_frame(self, data_source, start_date, end_date):
-        #Eigene Methode für Dataframe Verarbeitung
         mask = (data_source['datetime'] >= start_date) & (data_source['datetime'] <= end_date)
         Data_df = pd.DataFrame(data_source[mask])
         Data_df.rename(columns={'datetime': 'date'}, inplace=True)
         Data_df['date'] = Data_df['date'].map(lambda x: str(x) + '+00:00')
         return Data_df
     
+    #methode um daten/aktienkurse zu bekommen
     def get_stock_prices(self, ticker, start_date, end_date):
-        #methode um daten/aktienkurse zu bekommen
         start_date = np.datetime64(start_date, 'm')
         end_date = np.datetime64(end_date, 'm')
         if ticker in self.tickers:

@@ -26,6 +26,8 @@ import json
 import threading
 
 LOCAL_PORT = 12346
+
+#declare & intitalize default variablen
 pvp = True
 client = None
 thecountdown = 10
@@ -38,22 +40,25 @@ Game = backend.GameManager(speed_factor, "2022-06-06", thecountdown, all_stocks)
 Data_df = Game.get_stock_prices(stock, "2022-08-09 07:20", "2022-08-10 00:00")
 Data_df = Data_df.iloc[::interval, :]
 current_price = Data_df["close"].iloc[-1]
-#Data_df['date'] = Data_df['date'].map(lambda x: str(x)+'+00:00')
 
+#funktion die layout und backend fürs kaufen konfiguriert
 def buy(ticker, user: backend.User):
-    current_price = user.current_prices[ticker]  # Assuming this is how you get the current price
+    current_price = user.current_prices[ticker]
+    
+    #layout erstellen
     new_window = QDialog()
     new_window.setWindowTitle("Buy")
     new_window.resize(400, 300)
 
     layout = QVBoxLayout()
     
-    # Adding input widgets for margin and leverage:
+    # Hinzufügen von input widgets für margin:
     label1 = QLabel("Margin:")
     layout.addWidget(label1)
     input_field1 = QLineEdit()
     layout.addWidget(input_field1)
 
+    #long short buttons
     long_radio = QRadioButton("Long")
     short_radio = QRadioButton("Short")
     long_radio.setChecked(True)  # Default to Long
@@ -63,6 +68,8 @@ def buy(ticker, user: backend.User):
     radio_layout.addWidget(short_radio)
     layout.addLayout(radio_layout)
 
+    #falls short -> ticker zu "Inverse ticker", da wir um zu 
+    # shorten seperate ticker erstellen die den ursprünglichen invertieren
     def radio_clicked(ticker):
         if long_radio.isChecked():
             if ticker.startswith("Inverse "):
@@ -81,6 +88,7 @@ def buy(ticker, user: backend.User):
     long_radio.toggled.connect(on_radio_clicked)
     short_radio.toggled.connect(on_radio_clicked)
 
+    # Hinzufügen von input widgets für margin:
     label2 = QLabel("Leverage: 1")
     layout.addWidget(label2)
     def update_percentage_label(value):
@@ -91,13 +99,14 @@ def buy(ticker, user: backend.User):
     slider.setValue(1)  # Default value
     layout.addWidget(slider)
 
-    # Connect the slider's valueChanged signal to update the label
+    #slider mit funktion verbinden die dirket quantity berechnet
     slider.valueChanged.connect(update_percentage_label)
     
-    # Adding output widget for calculated quantity
+    # Hinzufügen von output widget für calculated quantity
     quantity_label = QLabel("Quantity: 0")
     layout.addWidget(quantity_label)
 
+    #buttons für kaufen und canceln hinzufügen
     button_layout = QHBoxLayout()
     
     ok_button = QPushButton("OK")
@@ -111,6 +120,7 @@ def buy(ticker, user: backend.User):
     
     layout.addLayout(button_layout)
 
+    #funktion um die quantity zu berechnen
     def update_quantity():
         try:
             margin = int(input_field1.text())
@@ -124,6 +134,7 @@ def buy(ticker, user: backend.User):
     input_field1.textChanged.connect(update_quantity)
     slider.valueChanged.connect(update_quantity)
 
+    #funktion um im backend zu kaufen und error handling zu machen
     def kaufen():
         try:
             margin = int(input_field1.text())
@@ -150,8 +161,9 @@ def buy(ticker, user: backend.User):
     new_window.setLayout(layout)
     new_window.exec_()
 
-    
+#funktion die layout und backend fürs verkaufen konfiguriert
 def sell(ticker, user):
+    #layout um zu verkaufen
     new_window = QDialog()
     new_window.setWindowTitle("Sell")
     new_window.resize(400, 300)
@@ -170,12 +182,14 @@ def sell(ticker, user):
     radio_layout.addWidget(short_radio)
     layout.addLayout(radio_layout)
     
+    #slider um prozentzahl der zu verkaufenden aktien festzulegen
     slider = QSlider(Qt.Horizontal)
     slider.setMinimum(1)
     slider.setMaximum(100)
     slider.setValue(50)  # Default value
     layout.addWidget(slider)
 
+    #label je nach slider position updaten
     def update_percentage_label(value):
         label1.setText(f"Prozent der Anzahl der Aktien: {value}%")
 
@@ -195,6 +209,7 @@ def sell(ticker, user):
     
     layout.addLayout(button_layout)
 
+    #funktion für error handling und backend nutzung beim verkaufen
     def verkaufen():
         while True:
             try:
@@ -204,12 +219,6 @@ def sell(ticker, user):
                 #catch edge case, when user hasnt entered a quantity
                 QMessageBox.information(window, "Title", "Bitte gebe eine Menge an!")
                 return
-        #with integrated backend:
-        """
-        1. sell the stock
-        2. if the new quantity would be zero, the backend deletes the whole object
-        3. use try-except
-        """
         try:
             # ticker wird invertiert, wenn short ausgewählt wurde
             nonlocal ticker
@@ -219,7 +228,6 @@ def sell(ticker, user):
             elif short_radio.isChecked():
                 if not ticker.startswith("Inverse "):
                     ticker = "Inverse " + ticker
-            print(ticker)
             user.sell_stock(user.positions[ticker], percentage)
             cashlabel.setText(f"Cash: {user.cash:.2f}")
             try:
@@ -245,6 +253,7 @@ def on_button_press(chart):
     chart.topbar['my_button'].set(new_button_value)
     print(f'Turned something {new_button_value.lower()}.')
 
+#funktion die die charts und preise updatet
 def update(user):
     try: 
         biszeit = Game.start_date
@@ -317,10 +326,11 @@ def timechange(chart):
 def stockchange(chart):
     global stock
     stock = chart.topbar['stock_menu'].value
-    
+
+#benutzer erstellen
 cash = 100000
 running = True
-user1 = backend.User("Freddy", cash=cash) #create a user in the backend
+user1 = backend.User("name", cash=cash) #create a user in the backend
 #user1.set_current_prices(stock, current_price)
 """to do: pop up window which lets the user enter a name"""
 
@@ -557,6 +567,7 @@ class LobbyWindow(QWidget):
 
 
 
+# layout definieren, dass Benutzer Daten am oberen Rand darstellt
 app = QApplication([])
 ex = NameInputDialog()
 ex.show()
@@ -568,6 +579,7 @@ widget = QWidget()
 window.resize(800, 500)
 layout.setContentsMargins(0, 0, 0, 0)
 
+#Label für timer
 timerlabel = QLabel(f"Time left: ")
 timerlabel.setStyleSheet("""
     font-size: 24px;
@@ -581,6 +593,7 @@ layout.addWidget(timerlabel)
 
 text_layout = QHBoxLayout()
 
+#Label für aktuellen Portfolio Wert
 pvlabel = QLabel(f"Portfolio Value: {cash}")
 pvlabel.setStyleSheet("""
     font-size: 24px;
@@ -591,6 +604,7 @@ pvlabel.setStyleSheet("""
     height: 20px;
 """)
 
+#label für verfügbares Kapital
 cashlabel = QLabel(f"Cash: {cash}")
 cashlabel.setStyleSheet("""
     font-size: 24px;
@@ -601,6 +615,7 @@ cashlabel.setStyleSheet("""
     height: 20px;
 """)
 
+#Label für Quantity Anzahl des aktuell ausgewählten Tickers
 quantitylabel = QLabel(f"Quantity {stock}: 0")
 quantitylabel.setStyleSheet("""
     font-size: 24px;
@@ -611,6 +626,7 @@ quantitylabel.setStyleSheet("""
     height: 20px;
 """)
 
+#Label um den gesamten PNL anzuzeigen
 pnllabel = QLabel(f"{stock} unrealized PNL: 0")
 pnllabel.setStyleSheet("""
     font-size: 24px;
@@ -647,6 +663,7 @@ chalayout = QHBoxLayout()
 chalayout.addWidget(chart.get_webview())
 
 layout.addLayout(chalayout,9)
+
 # Create the buy and sell buttons
 buy_button = QPushButton("Buy")
 sell_button = QPushButton("Sell")
