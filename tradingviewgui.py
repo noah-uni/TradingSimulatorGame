@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
     QSlider,
     QRadioButton,
     QInputDialog,
+    QScrollArea,
     )
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject, QThread
 from PyQt5.QtGui import QFont
@@ -464,6 +465,7 @@ class NameInputDialog(QWidget):
         self.layout.addWidget(self.label)
         self.inputField_speed = QLineEdit(self)
         self.inputField_speed.setFont(QFont("Arial", 12))
+        self.inputField_speed.setText("60")
         self.layout.addWidget(self.inputField_speed)
         
         #input field for game duration
@@ -472,14 +474,16 @@ class NameInputDialog(QWidget):
         self.layout.addWidget(self.label)
         self.inputField_duration = QLineEdit(self)
         self.inputField_duration.setFont(QFont("Arial", 12))
+        self.inputField_duration.setText("10")
         self.layout.addWidget(self.inputField_duration)
         
         #input field for start date in yy-mm-dd
-        self.label = QLabel("Start Date(between 2022-2024) in 'yy-mm-dd HH-MM':", self)
+        self.label = QLabel("Start Date(between 2022-2024) in 'yyyy-mm-dd HH-MM':", self)
         self.label.setFont(QFont("Arial", 14))
         self.layout.addWidget(self.label)
         self.inputField_start = QLineEdit(self)
         self.inputField_start.setFont(QFont("Arial", 12))
+        self.inputField_start.setText("2022-08-10 00:00")
         self.layout.addWidget(self.inputField_start)
 
         self.button = QPushButton("Start", self)
@@ -603,10 +607,10 @@ timerlabel.setStyleSheet("""
     qproperty-alignment: 'AlignCenter';
 """)
 layout.addWidget(timerlabel)
-text_layout = QHBoxLayout()
 
 # Label for current Portfolio Value
 pvlabel = QLabel(f"Portfolio Value: {cash}")
+pvlabel.setWordWrap(True)
 pvlabel.setStyleSheet("""
     font-size: 28px;
     font-weight: 600;
@@ -621,6 +625,7 @@ pvlabel.setStyleSheet("""
 
 # Label for available cash
 cashlabel = QLabel(f"Cash: {cash}")
+cashlabel.setWordWrap(True)
 cashlabel.setStyleSheet("""
     font-size: 28px;
     font-weight: 600;
@@ -635,6 +640,7 @@ cashlabel.setStyleSheet("""
 
 # Label for the number of open positions
 positions_label = QLabel(f"Open Positions: 0")
+positions_label.setWordWrap(True)
 positions_label.setStyleSheet("""
     font-size: 28px;
     font-weight: 600;
@@ -649,6 +655,7 @@ positions_label.setStyleSheet("""
 
 # Label to display total PNL
 pnllabel = QLabel(f"{stock} unrealized PNL: 0")
+pnllabel.setWordWrap(True)
 pnllabel.setStyleSheet("""
     font-size: 28px;
     font-weight: 600;
@@ -661,11 +668,12 @@ pnllabel.setStyleSheet("""
     qproperty-alignment: 'AlignCenter';
 """)
 
+text_layout = QHBoxLayout()
+
 text_layout.addWidget(pvlabel)
 text_layout.addWidget(cashlabel)
 text_layout.addWidget(pnllabel)
 text_layout.addWidget(positions_label)
-
 
 layout.addLayout(text_layout,1)
 
