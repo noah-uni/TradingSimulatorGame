@@ -144,7 +144,7 @@ def buy(ticker, user: backend.User):
             if user.cash >= margin:
                 user.buy_stock(ticker, margin, current_price, leverage, type=position_type)
                 cashlabel.setText(f"Cash: {user.cash:.2f}")
-                quantitylabel.setText(f"{ticker}: {user.positions[ticker].quantity:.2f}")
+                #quantitylabel.setText(f"{ticker}: {user.positions[ticker].quantity:.2f}")
                 new_window.close()
                 chart.marker(shape="circle", text=f"Bought {ticker}", color="green")
             else:
@@ -230,10 +230,12 @@ def sell(ticker, user):
                     ticker = "Inverse " + ticker
             user.sell_stock(user.positions[ticker], percentage)
             cashlabel.setText(f"Cash: {user.cash:.2f}")
+            """
             try:
-                quantitylabel.setText(f"{ticker}: {user.positions[stock].quantity:.2f}")
+                positions_label.setText(f"{ticker}: {user.positions[stock].quantity:.2f}")
             except:
-                quantitylabel.setText(f"{ticker}: {0}")
+                positions_label.setText(f"{ticker}: {0}")
+            """
             chart.marker(shape="circle", text=f"Sold {ticker}", color="red")
             new_window.close()
         except:
@@ -289,9 +291,9 @@ def update(user):
         #update pnl data
         try: pnllabel.setText(f"Total unrealized PNL: {sum([position.pnl for position in user.positions.values()]):.2f}")
         except: pnllabel.setText(f"Total unrealized PNL: 0")
-        #update quantity data
-        try: quantitylabel.setText(f"Quantity {stock}: {user.positions[stock].quantity:.2f}")
-        except: quantitylabel.setText(f"Quantity {stock}: 0")
+        #update Open Positions data
+        try: positions_label.setText(f"Open Positions: {len(user.positions)}")
+        except: positions_label.setText(f"Open Positions: 0")
         #update all other stocks so portfolio value is correctly updated:
         for ticker in all_stocks:
             if ticker != stock:
@@ -331,15 +333,6 @@ def stockchange(chart):
 cash = 100000
 running = True
 user1 = backend.User("name", cash=cash) #create a user in the backend
-#user1.set_current_prices(stock, current_price)
-"""to do: pop up window which lets the user enter a name"""
-
-# app = QApplication([])
-
-# name, ok = QInputDialog.getText(None, 'Starting the game', 'Enter your name:')
-        
-# if ok:
-#     user1.name = name
 
 class GameClient(QObject):
     end_game_signal = pyqtSignal()
@@ -615,9 +608,9 @@ cashlabel.setStyleSheet("""
     height: 20px;
 """)
 
-#Label für Quantity Anzahl des aktuell ausgewählten Tickers
-quantitylabel = QLabel(f"Quantity {stock}: 0")
-quantitylabel.setStyleSheet("""
+#Label für die Anzahl an offenen Positionen
+positions_label = QLabel(f"Open Positions: 0")
+positions_label.setStyleSheet("""
     font-size: 24px;
     font-weight: bold;
     color: white;
@@ -639,7 +632,7 @@ pnllabel.setStyleSheet("""
 text_layout.addWidget(pvlabel)
 text_layout.addWidget(cashlabel)
 text_layout.addWidget(pnllabel)
-text_layout.addWidget(quantitylabel)
+text_layout.addWidget(positions_label)
 layout.addLayout(text_layout,1)
 
 chart = QtChart(widget)
