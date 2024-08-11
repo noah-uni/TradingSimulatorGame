@@ -28,12 +28,13 @@ import threading
 LOCAL_PORT = 12346
 pvp = True
 client = None
-thecountdown = 1000
+thecountdown = 10
+speed_factor = 60
 table = {}
 interval = 1
 stock = "EUR/USD"
 all_stocks = ["EUR/USD", "BTC/USD", "Inverse EUR/USD", "Inverse BTC/USD"]
-Game = backend.GameManager("2022-06-06", all_stocks)
+Game = backend.GameManager(speed_factor, "2022-06-06", thecountdown, all_stocks)
 Data_df = Game.get_stock_prices(stock, "2022-08-09 07:20", "2022-08-10 00:00")
 Data_df = Data_df.iloc[::interval, :]
 current_price = Data_df["close"].iloc[-1]
@@ -245,8 +246,13 @@ def on_button_press(chart):
     print(f'Turned something {new_button_value.lower()}.')
 
 def update(user):
-    vonzeit = "2022-08-09 07:20"
-    biszeit = "2022-08-10 00:01"
+    try: 
+        biszeit = Game.start_date
+        vonzeit = datetime.strptime(biszeit, "%Y-%m-%d %H:%M") - timedelta(days=2)
+    except: 
+        vonzeit = "2022-08-09 07:20"
+        biszeit = "2022-08-10 00:01"
+        
     while running:
         Data_df = Game.get_stock_prices(stock, vonzeit, biszeit) 
         #close und open angleichen wenn intervall größer als eine minute ist
@@ -292,7 +298,7 @@ def update(user):
 
         if pvp:
             client.send_profit(user.capital - 100000)
-        time.sleep(0.5)
+        time.sleep(60/Game.speed_factor)
 
 
 def timechange(chart):
@@ -408,8 +414,8 @@ class NameInputDialog(QWidget):
     def initUI(self):
         self.layout = QVBoxLayout()
 
-        self.label = QLabel("Enter your name and click the button:", self)
-        self.label.setFont(QFont("Arial", 14))
+        self.label = QLabel("Mandatory Fields", self)
+        self.label.setFont(QFont("Arial", 18))
         self.layout.addWidget(self.label)
 
         self.single_radio = QRadioButton("Singleplayer")
@@ -421,11 +427,42 @@ class NameInputDialog(QWidget):
         radio_layout.addWidget(self.multi_radio)
         self.layout.addLayout(radio_layout)
 
+        #input field for name
+        self.label = QLabel("Name:", self)
+        self.label.setFont(QFont("Arial", 14))
+        self.layout.addWidget(self.label)
         self.inputField = QLineEdit(self)
         self.inputField.setFont(QFont("Arial", 12))
         self.layout.addWidget(self.inputField)
+        
+        self.label = QLabel("Voluntary Fields", self)
+        self.label.setFont(QFont("Arial", 18))
+        self.layout.addWidget(self.label)
+        #input field for game speed
+        self.label = QLabel("Speed Multiplier:", self)
+        self.label.setFont(QFont("Arial", 14))
+        self.layout.addWidget(self.label)
+        self.inputField_speed = QLineEdit(self)
+        self.inputField_speed.setFont(QFont("Arial", 12))
+        self.layout.addWidget(self.inputField_speed)
+        
+        #input field for game duration
+        self.label = QLabel("Game Duration in Minutes:", self)
+        self.label.setFont(QFont("Arial", 14))
+        self.layout.addWidget(self.label)
+        self.inputField_duration = QLineEdit(self)
+        self.inputField_duration.setFont(QFont("Arial", 12))
+        self.layout.addWidget(self.inputField_duration)
+        
+        #input field for start date in yy-mm-dd
+        self.label = QLabel("Start Date(between 2022-2024) in 'yy-mm-dd HH-MM':", self)
+        self.label.setFont(QFont("Arial", 14))
+        self.layout.addWidget(self.label)
+        self.inputField_start = QLineEdit(self)
+        self.inputField_start.setFont(QFont("Arial", 12))
+        self.layout.addWidget(self.inputField_start)
 
-        self.button = QPushButton("Enter Name", self)
+        self.button = QPushButton("Start", self)
         self.button.setFont(QFont("Arial", 12))
         self.button.clicked.connect(self.resume)
         
@@ -437,6 +474,20 @@ class NameInputDialog(QWidget):
     def resume(self):
         global pvp
         name = self.inputField.text()
+        #try & except as duration & start_date & speed-multiplier are not mandatory
+        try:
+            duration = float(self.inputField_duration.text())
+            Game.duration = int(duration)
+        except: pass
+        try: 
+             start_date = self.inputField_start.text()
+             Game.start_date = start_date
+        except: pass
+        try: 
+             speed = float(self.inputField_speed.text())
+             Game.speed_factor = int(speed)
+        except: pass
+        
         if name:
             user1.name = name
 
@@ -816,7 +867,7 @@ if pvp:
         client = GameClient(user1.name)
     client.start()
 else:
-    worker = CountdownWorker(thecountdown)  # Set countdown time in seconds
+    worker = CountdownWorker(Game.duration * 60)  # Set countdown time in seconds
     worker.finished.connect(end_screen)
 
     thread = QThread()

@@ -162,9 +162,11 @@ class GameManager:
     Klasse um das Spiel zu verwalten & Daten bereitzustellen
     datetime must be in Year-Month-Day Minutes:Hours
     """
-    def __init__(self, start_date, tickers) -> None:
+    def __init__(self, speed_factor, start_date, duration, tickers) -> None:
+        self.speed_factor = speed_factor
         self.start_date = start_date
         self.tickers = tickers
+        self.duration = duration
 
     def get_data_frame(self, data_source, start_date, end_date):
         #Eigene Methode für Dataframe Verarbeitung
