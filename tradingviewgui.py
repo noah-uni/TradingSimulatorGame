@@ -525,8 +525,9 @@ class NameInputDialog(QWidget):
             self.lobby = LobbyWindow()
             self.lobby.show()   
             
-
+#Window for the Lobby, shows all Players in the lobby
 class LobbyWindow(QWidget):
+
     start_game_signal = pyqtSignal()
     def __init__(self):
         super().__init__()
