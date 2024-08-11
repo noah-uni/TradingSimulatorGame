@@ -294,6 +294,23 @@ def update(user):
         #update Open Positions data
         try: positions_label.setText(f"Open Positions: {len(user.positions)}")
         except: positions_label.setText(f"Open Positions: 0")
+        #update total pnl label color (green or red or white)
+        color = "#FFFFFF"
+        if sum(position.pnl for position in user.positions.values()) > 0:
+            color = "#00FF00"
+        elif sum(position.pnl for position in user.positions.values()) < 0:
+            color = "#FF4500"
+        pnllabel.setStyleSheet(f"""
+            font-size: 28px;
+            font-weight: 600;
+            color: {color};
+            padding: 12px 15px;
+            background-color: #1F1F1F;
+            border: 2px solid #FFFFFF;
+            border-radius: 8px;
+            min-height: 40px;
+            qproperty-alignment: 'AlignCenter';
+        """)
         #update all other stocks so portfolio value is correctly updated:
         for ticker in all_stocks:
             if ticker != stock:
@@ -575,64 +592,81 @@ layout.setContentsMargins(0, 0, 0, 0)
 #Label für timer
 timerlabel = QLabel(f"Time left: ")
 timerlabel.setStyleSheet("""
-    font-size: 24px;
-    font-weight: bold;
-    color: white;
-    padding: 10px;
-    border-radius: 5px;
-    height: 20px;
+    font-size: 28px;
+    font-weight: 600;
+    color: #FFFFFF;
+    padding: 12px 15px;
+    background-color: #1F1F1F;
+    border: 2px solid #FFFFFF;
+    border-radius: 8px;
+    min-height: 40px;
+    qproperty-alignment: 'AlignCenter';
 """)
 layout.addWidget(timerlabel)
-
 text_layout = QHBoxLayout()
 
-#Label für aktuellen Portfolio Wert
+# Label for current Portfolio Value
 pvlabel = QLabel(f"Portfolio Value: {cash}")
 pvlabel.setStyleSheet("""
-    font-size: 24px;
-    font-weight: bold;
-    color: white;
-    padding: 10px;
-    border-radius: 5px;
-    height: 20px;
+    font-size: 28px;
+    font-weight: 600;
+    color: #FFFFFF;
+    padding: 12px 15px;
+    background-color: #1F1F1F;
+    border: 2px solid #FFFFFF;
+    border-radius: 8px;
+    min-height: 40px;
+    qproperty-alignment: 'AlignCenter';
 """)
 
-#label für verfügbares Kapital
+# Label for available cash
 cashlabel = QLabel(f"Cash: {cash}")
 cashlabel.setStyleSheet("""
-    font-size: 24px;
-    font-weight: bold;
-    color: white;
-    padding: 10px;
-    border-radius: 5px;
-    height: 20px;
+    font-size: 28px;
+    font-weight: 600;
+    color: #FFFFFF;
+    padding: 12px 15px;
+    background-color: #1F1F1F;
+    border: 2px solid #FFFFFF;
+    border-radius: 8px;
+    min-height: 40px;
+    qproperty-alignment: 'AlignCenter';
 """)
 
-#Label für die Anzahl an offenen Positionen
+# Label for the number of open positions
 positions_label = QLabel(f"Open Positions: 0")
 positions_label.setStyleSheet("""
-    font-size: 24px;
-    font-weight: bold;
-    color: white;
-    padding: 10px;
-    border-radius: 5px;
-    height: 20px;
+    font-size: 28px;
+    font-weight: 600;
+    color: #FFFFFF;
+    padding: 12px 15px;
+    background-color: #1F1F1F;
+    border: 2px solid #FFFFFF;
+    border-radius: 8px;
+    min-height: 40px;
+    qproperty-alignment: 'AlignCenter';
 """)
 
-#Label um den gesamten PNL anzuzeigen
+# Label to display total PNL
 pnllabel = QLabel(f"{stock} unrealized PNL: 0")
 pnllabel.setStyleSheet("""
-    font-size: 24px;
-    font-weight: bold;
-    color: white;
-    padding: 10px;
-    border-radius: 5px;
-    height: 20px;
+    font-size: 28px;
+    font-weight: 600;
+    color: #FFFFFF;
+    padding: 12px 15px;
+    background-color: #1F1F1F;
+    border: 2px solid #FFFFFF;
+    border-radius: 8px;
+    min-height: 40px;
+    qproperty-alignment: 'AlignCenter';
 """)
+
 text_layout.addWidget(pvlabel)
 text_layout.addWidget(cashlabel)
 text_layout.addWidget(pnllabel)
 text_layout.addWidget(positions_label)
+
+
 layout.addLayout(text_layout,1)
 
 chart = QtChart(widget)
@@ -859,9 +893,9 @@ class CountdownWorker(QObject):
 
     def stop(self):
         self.timer.stop()
-    
-        
+      
 button_show_positions = QPushButton("Positions: Show More")
+
 button_show_positions.clicked.connect(lambda: open_positions_widget(window))  # Connect the button to the slot
 text_layout.addWidget(button_show_positions)
 
