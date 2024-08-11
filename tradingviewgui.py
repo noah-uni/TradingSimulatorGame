@@ -28,7 +28,7 @@ import threading
 LOCAL_PORT = 12346
 pvp = True
 client = None
-thecountdown = 5
+thecountdown = 1000
 table = {}
 interval = 1
 stock = "EUR/USD"
@@ -52,9 +52,6 @@ def buy(ticker, user: backend.User):
     layout.addWidget(label1)
     input_field1 = QLineEdit()
     layout.addWidget(input_field1)
-    
-    label2 = QLabel("Leverage: 1")
-    layout.addWidget(label2)
 
     long_radio = QRadioButton("Long")
     short_radio = QRadioButton("Short")
@@ -83,7 +80,8 @@ def buy(ticker, user: backend.User):
     long_radio.toggled.connect(on_radio_clicked)
     short_radio.toggled.connect(on_radio_clicked)
 
-
+    label2 = QLabel("Leverage: 1")
+    layout.addWidget(label2)
     def update_percentage_label(value):
         label2.setText(f"Leverage: {value:.2f}")
     slider = QSlider(Qt.Horizontal)

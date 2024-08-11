@@ -14,19 +14,14 @@ dtype = np.dtype([
 eurusd_file = "eurusd_2021to2024.csv"
 btcusd_file = "btcusd_2022to2024.csv"
 
-# Read the CSV file
+# CSV lesen und in richtiges datenformat bringen
 data_eurusd = pd.read_csv('./Data/'+eurusd_file)
-
-# Convert the datetime column to datetime64
 data_eurusd['datetime'] = pd.to_datetime(data_eurusd['datetime'])
-
-# Read the CSV file
 data_btcusd = pd.read_csv('./Data/'+btcusd_file)
-
-# Convert the datetime column to datetime64
 data_btcusd['datetime'] = pd.to_datetime(data_btcusd['datetime'])
 
 def invert(Data_df):
+    #invertiert die kurse in den csv um shorten einfacher zu implementieren
     inverse = Data_df.copy()
     numerical_columns = Data_df.select_dtypes(include=['number']).columns
     for column in numerical_columns:
@@ -39,25 +34,26 @@ inverted = {}
 inverted["EUR/USD"] = invert(data_eurusd)
 inverted["BTC/USD"] = invert(data_btcusd)
 
-"""
-Klasse für Positionen, soll bei jedem kauf geöffnet werden und bei jedem verkauf geschlossen
-"""
 
 class Position:
+    """
+    Klasse für Positionen, soll bei jedem kauf geöffnet werden und bei jedem verkauf geschlossen
+    """
     def __init__(self, ticker, quantity, price, leverage, margin, type) -> None:
-        self.ticker = ticker
-        self.quantity = quantity
-        self.price_whenopened = price
-        self.price = price
-        self.total_whenopened = self.quantity * self.price
-        self.total = self.quantity * self.price
-        self.leverage = leverage
-        self.margin = margin
-        self.pnl = 0
-        self.type = type
-        self.liquidation_price = self.price_whenopened * (1 - 1/leverage)
+        self.ticker = ticker    #Kürzel der Aktie der Position
+        self.quantity = quantity    #Menge an Aktien
+        self.price_whenopened = price   #Eröffnungspreis
+        self.price = price              #Aktueller Preis
+        self.total_whenopened = self.quantity * self.price  #Positionsgröße bei Eröffnung
+        self.total = self.quantity * self.price #aktuelle Positionsgröße
+        self.leverage = leverage    #verwendeter Hebel
+        self.margin = margin    #verwendetes Eigenkapital / Margin (Bei Hebel = 1: margin = total_whenopened)
+        self.pnl = 0    #=Profit & Loss: Gewinn & Verlust
+        self.type = type    #typ: long / short
+        self.liquidation_price = self.price_whenopened * (1 - 1/leverage) #liquidationspreis (falls leverage = 1: liquidation_price = 0)
 
     def add_quantity(self, quantity_to_add, margin_to_add, price):
+        #falls bereits eine Position exisitiert wird bei abermaligem Kaufen nur die bestehende Position angepasst
         self.quantity = self.quantity + quantity_to_add
         self.total_whenopened += quantity_to_add * price
         self.total += quantity_to_add * price
@@ -65,6 +61,7 @@ class Position:
         self.leverage = self.total_whenopened / self.margin
     
     def remove_quantity(self, quantity_to_remove):
+        #analog zu add_quantity, wird bei nur teilweisem schließen einer position benötigt
         percentage = quantity_to_remove / self.quantity
         self.quantity = self.quantity - quantity_to_remove
         self.total_whenopened = self.quantity * self.price_whenopened
@@ -73,6 +70,7 @@ class Position:
         self.pnl = self.total - self.total_whenopened
         
     def update_price(self, new_price, user):
+        #um die Daten der Positionen zu aktualisieren
         self.price = new_price
         self.total = self.quantity * self.price
         self.pnl = self.total - self.total_whenopened
@@ -87,14 +85,12 @@ class Position:
     
     def close(self):
         self = None
-        
-from typing import List
 
-"""
-Klasse die das Kapital und die Positionen eines Users speichert und verwaltet
-"""
 
 class User:
+    """
+    Klasse die das Kapital und die Positionen eines Users speichert und verwaltet
+    """
     def __init__(self, name, cash):
         self.name = name
         self.cash = cash                # Starting cash
@@ -104,6 +100,7 @@ class User:
         self.current_prices = {}
         
     def buy_stock(self, ticker, margin, price, leverage, type):
+        #funktion um Aktien zu kaufen
         quantity = (margin*leverage)/price
         if margin <= self.cash:
             self.capital_invested += margin
@@ -120,6 +117,7 @@ class User:
             print("Not enough cash")
 
     def sell_stock(self, position:Position, percentage):
+        #funktion um Aktien zu verkaufen
         quantity_to_sell = position.quantity * percentage
         
         if position.quantity == quantity_to_sell:
@@ -139,9 +137,11 @@ class User:
             print("Not enough stock to sell")
     
     def set_current_prices(self, ticker, price):
+        #aktualisiert die liste mit aktuellen preisen, notwendig um positionen zu aktualisieren
             self.current_prices[ticker] = price
     
     def update_positions(self, ticker, price):
+        #aktualisiert positionen und deren attribute, vor allem PNL sehr wichtig
         result = ""
         try: result = self.positions[ticker].update_price(price, self)
         except: pass
@@ -159,14 +159,15 @@ class User:
     
 class GameManager:
     """
+    Klasse um das Spiel zu verwalten & Daten bereitzustellen
     datetime must be in Year-Month-Day Minutes:Hours
     """
     def __init__(self, start_date, tickers) -> None:
         self.start_date = start_date
         self.tickers = tickers
 
-    #Eigene Methode für Dataframe Verarbeitung
     def get_data_frame(self, data_source, start_date, end_date):
+        #Eigene Methode für Dataframe Verarbeitung
         mask = (data_source['datetime'] >= start_date) & (data_source['datetime'] <= end_date)
         Data_df = pd.DataFrame(data_source[mask])
         Data_df.rename(columns={'datetime': 'date'}, inplace=True)
@@ -174,6 +175,7 @@ class GameManager:
         return Data_df
     
     def get_stock_prices(self, ticker, start_date, end_date):
+        #methode um daten/aktienkurse zu bekommen
         start_date = np.datetime64(start_date, 'm')
         end_date = np.datetime64(end_date, 'm')
         if ticker in self.tickers:
